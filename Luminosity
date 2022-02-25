@@ -41,7 +41,7 @@ finity.dark_theme = { -- dark
 	main_container = Color3.fromRGB(19, 19, 20),
 	separator_color = Color3.fromRGB(50, 50, 52),
 
-	text_color = Color3.fromRGB(175, 175, 175),
+	text_color = Color3.fromRGB(213, 213, 213),
 
 	category_button_background = Color3.fromRGB(24, 23, 25),
 	category_button_border = Color3.fromRGB(43, 42, 45),
@@ -53,17 +53,17 @@ finity.dark_theme = { -- dark
 	slider_color = Color3.fromRGB(138, 138, 138),
 	slider_color_sliding = Color3.fromRGB(134, 255, 175),
 	slider_background = Color3.fromRGB(65, 62, 67),
-	slider_text = Color3.fromRGB(147, 147, 147),
+	slider_text = Color3.fromRGB(213, 213, 213),
 
 	textbox_background = Color3.fromRGB(70, 70, 72),
 	textbox_background_hover = Color3.fromRGB(95, 95, 98),
-	textbox_text = Color3.fromRGB(153, 153, 153),
+	textbox_text = Color3.fromRGB(213, 213, 213),
 	textbox_text_hover = Color3.fromRGB(172, 172, 172),
 	textbox_placeholder = Color3.fromRGB(100, 100, 102),
 
 	dropdown_background = Color3.fromRGB(47, 47, 49),
-	dropdown_text = Color3.fromRGB(100, 100, 100),
-	dropdown_text_hover = Color3.fromRGB(126, 126, 126),
+	dropdown_text = Color3.fromRGB(213, 213, 213),
+	dropdown_text_hover = Color3.fromRGB(170, 170, 170),
 	dropdown_scrollbar_color = Color3.fromRGB(77, 77, 79),
 
 	button_background = Color3.fromRGB(55, 55, 57),
