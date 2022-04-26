@@ -1456,8 +1456,4 @@ function CreateVape()
 	loadstring(game:HttpGet("https://raw.githubusercontent.com/GoldenSnailDev/BoogaVapeV4/main/CreateMain", true))()
 end
 
-if game.GameId == WhitelistedGame then
-	CreateVape()
-else
-	game.Players.LocalPlayer:Kick("Join Booga Classic for this script to work")
-end
+CreateVape()
