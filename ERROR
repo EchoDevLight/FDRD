@@ -1452,8 +1452,4 @@ function CreateVape()
 	end)
 end
 
-function CreateVape()
-	loadstring(game:HttpGet("https://raw.githubusercontent.com/GoldenSnailDev/BoogaVapeV4/main/CreateMain", true))()
-end
-
 CreateVape()
