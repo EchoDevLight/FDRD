@@ -1058,14 +1058,14 @@ function CreateVape()
 					createnotification("EntityESP", "EntityESP has been turned On", 3)
 					while wait(0.1) do
 						pcall(function()
-							if SharkESP.Enabled == false or EntityESP.Enabled == false then
+							if SharkESP.Value == false or EntityESP.Enabled == false then
 								for i,v in pairs(game.Workspace.Critters:GetChildren()) do
 									if v:FindFirstChild("Nametag") and v.Name == "Lurky Boi" then
 										v:FindFirstChild("Nametag"):Destroy()
 									end
 								end					
 							end
-							if SharkESP.Enabled == true and EntityESP.Enabled == true then
+							if SharkESP.Value == true and EntityESP.Enabled == true then
 								for i,v in pairs(game.Workspace.Critters:GetChildren()) do
 									if v:FindFirstChild("Nametag") and v.Name == "Lurky Boi" then
 										v:FindFirstChild("Nametag"):Destroy()
@@ -1205,14 +1205,14 @@ function CreateVape()
 					createnotification("ObjectESP", "ObjectESP has been turned On", 3)
 					while wait(0.1) do
 						pcall(function()
-							if TotemESP.Enabled == false or ObjectESP.Enabled == false then
+							if TotemESP.Value == false or ObjectESP.Enabled == false then
 								for i,v in pairs(game.Workspace.Totems:GetChildren()) do
 									if v:FindFirstChild("Nametag") then
 										v:FindFirstChild("Nametag"):Destroy()
 									end
 								end					
 							end
-							if TotemESP.Enabled == true and ObjectESP.Enabled == true then
+							if TotemESP.Value == true and ObjectESP.Enabled == true then
 								for i,v in pairs(game.Workspace.Totems:GetChildren()) do
 									if v:FindFirstChild("Nametag") then
 										v:FindFirstChild("Nametag"):Destroy()
