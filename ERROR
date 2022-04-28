@@ -1,0 +1,2147 @@
+local mt = getrawmetatable(game)
+local old = mt.__namecall
+local protect = newcclosure or protect_function
+
+if not protect then
+	protect = function(f) return f end
+end
+
+setreadonly(mt, false)
+mt.__namecall = protect(function(self, ...)
+	local method = getnamecallmethod()
+	if method == "Kick" then
+		wait(9e9)
+		return
+	end
+	return old(self, ...)
+end)
+hookfunction(game:GetService("Players").LocalPlayer.Kick,protect(function() wait(9e9) end))
+
+print("Version 1.02")
+
+function CreateVape()
+	shared.VapeIndependent = true
+	shared.CustomSaveVape = "BoogaBoogaClassicSave"
+
+	local uilib = loadstring(game:HttpGet("https://pastebin.com/raw/GQYF5jdx", true))()
+	local GuiLibrary = shared.GuiLibrary
+
+	local Combat = uilib["ObjectsThatCanBeSaved"]["CombatWindow"]["Api"]
+	local Blatant = uilib["ObjectsThatCanBeSaved"]["BlatantWindow"]["Api"]
+	local Render = uilib["ObjectsThatCanBeSaved"]["RenderWindow"]["Api"]
+	local Utility = uilib["ObjectsThatCanBeSaved"]["UtilityWindow"]["Api"]
+	local World = uilib["ObjectsThatCanBeSaved"]["WorldWindow"]["Api"]
+
+	local Player = game:GetService("Players").LocalPlayer
+	local c = workspace.CurrentCamera
+	local player = game.Players.LocalPlayer
+	local userInput = game:GetService("UserInputService")
+	local rs = game:GetService("RunService")
+	local starterPlayer = game:GetService("StarterPlayer")
+
+	local FlySpeed = {["Value"] = 500}
+	local lastUpdate = 0
+	local selected = false
+
+	local loop = false
+	local loop2 = false
+	local loop3 = false
+	local loop4 = false
+
+	local CamLock = false
+
+	local RenderStepTable = {}
+	local StepTable = {}
+
+	local function createnotification(title, text, delay)
+		pcall(function()
+			local frame = GuiLibrary["CreateNotification"](title, text, delay, "assets/WarningNotification.InfoNotification.png")
+			frame.Frame.BackgroundColor3 = Color3.fromRGB(236, 129, 44)
+			frame.Frame.Frame.BackgroundColor3 = Color3.fromRGB(236, 129, 44)
+		end)
+	end
+
+	local function createwarning(title, text, delay)
+		local suc, res = pcall(function()
+			local frame = GuiLibrary["CreateNotification"](title, text, delay, "assets/WarningNotification.png")
+			frame.Frame.Frame.ImageColor3 = Color3.fromRGB(236, 129, 44)
+			return frame
+		end)
+		return (suc and res)
+	end
+
+	function getNextMovement(deltaTime)
+		local nextMove = Vector3.new()
+		if userInput:IsKeyDown("A") or userInput:IsKeyDown("Left") then
+			nextMove = Vector3.new(-1,0,0)
+		elseif userInput:IsKeyDown("D") or userInput:IsKeyDown("Right") then
+			nextMove = Vector3.new(1,0,0)
+		end
+		if userInput:IsKeyDown("W") or userInput:IsKeyDown("Up") then
+			nextMove = nextMove + Vector3.new(0,0,-1)
+		elseif userInput:IsKeyDown("S") or userInput:IsKeyDown("Down") then
+			nextMove = nextMove + Vector3.new(0,0,1)
+		end
+		if userInput:IsKeyDown("Space") then
+			nextMove = nextMove + Vector3.new(0,1,0)
+		elseif userInput:IsKeyDown("LeftControl") then
+			nextMove = nextMove + Vector3.new(0,-1,0)
+		end
+		return CFrame.new( nextMove * (FlySpeed.Value * deltaTime) )
+	end
+
+	function onSelected()
+		local char = player.Character
+		if char then
+			local humanoid = char:WaitForChild("Humanoid")
+			local root = char:WaitForChild("HumanoidRootPart")
+			currentPos = root.Position
+			selected = true
+			root.Anchored = true
+			lastUpdate = tick()
+			humanoid.PlatformStand = true
+			while selected do
+				wait()
+				local delta = tick()-lastUpdate
+				local look = (c.Focus.p-c.CoordinateFrame.p).unit
+				local move = getNextMovement(delta)
+				local pos = root.Position
+				root.CFrame = CFrame.new(pos,pos+look) * move
+				lastUpdate = tick()
+			end
+			root.Anchored = false
+			root.Velocity = Vector3.new()
+			humanoid.PlatformStand = false
+		end
+	end
+
+	function onDeselected()
+		selected = false
+	end
+
+	local function BindToStepped(name, num, func)
+		if StepTable[name] == nil then
+			StepTable[name] = game:GetService("RunService").Stepped:connect(func)
+		end
+	end
+
+	local function UnbindFromStepped(name)
+		if StepTable[name] then
+			StepTable[name]:Disconnect()
+			StepTable[name] = nil
+		end
+	end
+
+	function Touch(p1, p2)
+		pcall(function()
+			firetouchinterest(p1, p2, 0)
+			wait(0.1)
+			firetouchinterest(p1, p2, 1)
+		end)
+	end
+
+	local function runcode(func)
+		func()
+	end
+
+	createnotification("Vape V4", "Right-Shift to see Menu!", 5)
+
+	runcode(function()
+
+		local AutoTool  = {["Enabled"] = false}
+		local AutoWeapon  = {["Value"] = false}
+		local WeaponItemSlot = {["Value"] = 1}
+
+		local KillAura = {["Enabled"] = false}
+		local KillAuraRange = {["Value"] = 5}
+
+		local AutoHeal = {["Enabled"] = false}
+		local HealthMustBe = {["Value"] = 70}
+		local AutoHealItem = {["Value"] = ""}
+
+		AutoTool = GuiLibrary["ObjectsThatCanBeSaved"]["CombatWindow"]["Api"].CreateOptionsButton({
+			["Name"] = "AutoTool",
+			["Function"] = function(callback)
+				if callback then
+					createnotification("AutoTool", "AutoTool has been turned On", 3)
+					while wait() and AutoTool.Enabled == true do
+						if AutoWeapon.Value == true then
+							for i,v in pairs(game.Players:GetChildren()) do
+
+								local char = game.Workspace.Characters:FindFirstChild(game.Players.LocalPlayer.Name)
+								if (char.HumanoidRootPart.Position - v.Character.HumanoidRootPart.Position).magnitude < 15 and v.Name ~= game.Players.LocalPlayer.Name then
+
+									local char = game.Workspace.Characters:FindFirstChild(Player.Name)
+									if (char.HumanoidRootPart.Position - v.Character.HumanoidRootPart.Position).magnitude < KillAuraRange.Value and v.Name ~= game.Players.LocalPlayer.Name then
+
+										local args = {
+											[1] = WeaponItemSlot.Value
+										}
+
+										game:GetService("ReplicatedStorage").Events.EquipTool:FireServer(unpack(args))
+
+									end
+								end
+							end
+						end
+					end
+				else
+					createnotification("AutoTool", "AutoTool has been turned Off", 3)
+				end
+			end,
+			["HoverText"] = "gets out your weapon automaticly",
+			["Default"] = false,
+			["ExtraText"] = function() return " " end
+		})
+		AutoWeapon = AutoTool.CreateToggle({
+			["Name"] = "Weapons",
+			["HoverText"] = "automatticly takes out your weapon when you ",
+			["Function"] = function(callback)
+				if callback then
+
+				else
+				end
+			end,
+			["Default"] = false
+		})
+		WeaponItemSlot = AutoTool.CreateSlider({
+			["Name"] = "Range",
+			["Min"] = 1,
+			["Max"] = 6,
+			["Function"] = function(val)
+			end,
+			["HoverText"] = "changes the range of the kill aura",
+			["Default"] = 3
+		})
+
+		KillAura = GuiLibrary["ObjectsThatCanBeSaved"]["CombatWindow"]["Api"].CreateOptionsButton({
+			["Name"] = "KillAura",
+			["Function"] = function(callback)
+				if callback then
+					createnotification("KillAura", "Killaura has been turned On", 3)
+					while wait() and KillAura.Enabled == true do
+						for i,v in pairs(game.Players:GetChildren()) do
+							if v.Character.HumanoidRootPart then
+
+								local char = game.Workspace.Characters:FindFirstChild(game.Players.LocalPlayer.Name)
+								if (char.HumanoidRootPart.Position - v.Character.HumanoidRootPart.Position).magnitude < 15 and v.Name ~= game.Players.LocalPlayer.Name then
+
+									local char = game.Workspace.Characters:FindFirstChild(Player.Name)
+									if (char.HumanoidRootPart.Position - v.Character.HumanoidRootPart.Position).magnitude < KillAuraRange.Value and v.Name ~= game.Players.LocalPlayer.Name then
+										local list = {
+											v.Character.Head,
+											v.Character.UpperTorso,
+											v.Character.LowerTorso,
+											v.Character.LeftFoot,
+											v.Character.RightFoot,
+											v.Character.LeftLowerArm,
+											v.Character.LeftLowerLeg,
+											v.Character.RightLowerArm,
+											v.Character.RightLowerLeg,
+											v.Character.LeftUpperArm,
+											v.Character.RightUpperArm,
+											v.Character.LeftUpperLeg,
+											v.Character.RightUpperLeg,
+											v.Character.LeftHand,
+											v.Character.RightHand
+										}
+
+										game:GetService("ReplicatedStorage").Events.SwingTool:FireServer(game:GetService("ReplicatedStorage").RelativeTime.Value, list)
+									end
+								end
+							end
+						end
+					end
+				else
+					createnotification("KillAura", "Killaura has been turned Off", 3)
+				end
+			end,
+			["HoverText"] = "Kills people in your radius",
+			["Default"] = false,
+			["ExtraText"] = function() return " " end
+		})
+
+		KillAuraRange = KillAura.CreateSlider({
+			["Name"] = "Range",
+			["Min"] = 1,
+			["Max"] = 10,
+			["Function"] = function(val)
+			end,
+			["HoverText"] = "changes the range of the kill aura",
+			["Default"] = 5
+		})
+
+		AutoHeal = GuiLibrary["ObjectsThatCanBeSaved"]["CombatWindow"]["Api"].CreateOptionsButton({
+			["Name"] = "AutoHeal",
+			["Function"] = function(callback)
+				if callback then
+					createnotification("AutoHeal", "AutoHeal has been turned On", 3)
+					local char = game.Workspace.Characters:FindFirstChild(game.Players.LocalPlayer.Name)
+					while game:GetService("RunService").Heartbeat:Wait()and AutoHeal.Enabled == true do
+						if char.Humanoid.Health <= HealthMustBe.Value then
+							game:GetService("ReplicatedStorage").Events.UseBagItem:FireServer(AutoHealItem.Value)
+						end
+					end
+				else
+					createnotification("AutoHeal", "AutoHeal has been turned Off", 3)
+				end
+			end,
+			["HoverText"] = "Heals yourself and you need to choose the item you want to eat",
+			["Default"] = false,
+			["ExtraText"] = function() return " " end
+		})
+
+		HealthMustBe = AutoHeal.CreateSlider({
+			["Name"] = "Health Check",
+			["Min"] = 1,
+			["Max"] = 99,
+			["Function"] = function(val)
+			end,
+			["HoverText"] = "Checks your health",
+			["Default"] = 70
+		})
+		AutoHealItem = AutoHeal.CreateTextBox({
+			["Name"] = "Item",
+			["TempText"] = "Item Name",
+			["HoverText"] = "the item you want to heal"
+		})
+	end)
+
+	runcode(function()
+		local AutoBreak = {["Enabled"] = false}
+
+		local AutoPickup = {["Enabled"] = false}
+
+		local AutoCraft = {["Enabled"] = false}
+		local AutoCraftItem = {["Value"] = ""}
+
+		local AutoFarm = {["Enabled"] = false}
+		local AutoFarmDelay = {["Value"] = 10}
+		local AutoFarmName = {["Value"] = ""}
+
+		local TeleportGrab = {["Enabled"] = false}
+		local TeleportUseless1 = {["Value"] = false}
+		local TeleportIgnored1 = {["Value"] = ""}
+		local TeleportIgnored2 = {["Value"] = ""}
+		local TeleportIgnored3 = {["Value"] = ""}
+		local TeleportIgnored4 = {["Value"] = ""}
+		local TeleportIgnored5 = {["Value"] = ""}
+		local TeleportIgnored6 = {["Value"] = ""}
+		local TeleportIgnored7 = {["Value"] = ""}
+		local TeleportIgnored8 = {["Value"] = ""}
+		local TeleportIgnored9 = {["Value"] = ""}
+		local TeleportIgnored10 = {["Value"] = ""}
+
+		local AutoDrop = {["Enabled"] = false}
+		local AutoDropItem = {["Value"] = ""}
+
+		local Fly = {["Enabled"] = false}
+
+		local Gravity = {["Enabled"] = false}
+		local GravityPower = {["Value"] = 500}
+
+		local InfiniteJump = {["Enabled"] = false}
+		local InfiniteJumpPower = {["Value"] = 50}
+
+		local Speed = {["Enabled"] = false}
+		local SpeedPower = {["Value"] = 10}
+
+		local NoSlowDown = {["Enabled"] = false}
+
+		AutoFarm = GuiLibrary["ObjectsThatCanBeSaved"]["BlatantWindow"]["Api"].CreateOptionsButton({
+			["Name"] = "AutoFarm",
+			["Function"] = function(callback)
+				if callback then
+					createwarning("AutoFarm", "This is very risky", 5)
+					while game:GetService("RunService").Heartbeat:Wait() and AutoFarm.Enabled == true do
+
+						for i,v in next, game.Workspace.Resources:GetChildren() do
+							for _,e in pairs(v:GetChildren()) do
+								local char = game.Workspace.Characters:FindFirstChild(game.Players.LocalPlayer.Name)
+
+								if e.ClassName == "Part" then
+									if AutoFarmName.Value == "Small Tree" and v.Name == "Small Tree" then
+										char.HumanoidRootPart.CFrame = CFrame.new(e.Position + Vector3.new(0,4,0))
+										wait(AutoFarmDelay.Value)
+									end
+									if AutoFarmName.Value == "Sun Tree" and v.Name == "Sun Tree" then
+										char.HumanoidRootPart.CFrame = CFrame.new(e.Position + Vector3.new(0,4,0))
+										wait(AutoFarmDelay.Value)
+									end
+									if AutoFarmName.Value == "Small Rock" and v.Name == "Small Rock" then
+										char.HumanoidRootPart.CFrame = CFrame.new(e.Position + Vector3.new(0,4,0))
+										wait(AutoFarmDelay.Value)
+									end
+									if AutoFarmName.Value == "Gold Node" and v.Name == "Gold Node" then
+										char.HumanoidRootPart.CFrame = CFrame.new(e.Position + Vector3.new(0,4,0))
+										wait(AutoFarmDelay.Value)
+									end
+									if AutoFarmName.Value == "Crystal" and v.Name == "Crystal Lode" then
+										char.HumanoidRootPart.CFrame = CFrame.new(e.Position + Vector3.new(0,4,0))
+										wait(AutoFarmDelay.Value)
+									end
+								end
+							end
+						end
+					end
+				else
+					createnotification("AutoFarm", "AutoFarm has been turned Off", 3)
+				end
+			end,
+			["HoverText"] = "teleport to resources and farm",
+			["Default"] = false,
+			["ExtraText"] = function() return " " end
+		})
+		AutoFarmDelay = AutoFarm.CreateSlider({
+			["Name"] = "Delay",
+			["Min"] = 1,
+			["Max"] = 3600,
+			["Function"] = function(val)
+			end,
+			["HoverText"] = "set how long you are willing to wait for the object to break",
+			["Default"] = 10
+		})
+		AutoFarmName = AutoFarm.CreateDropdown({
+			["Name"] = "Select Resource",
+			["List"] = {"Small Tree", 
+				"Sun Tree",
+				"Small Rock",
+				"Gold Node",
+				"Crystal Lode"
+			},
+			["Function"] = function(val)
+			end
+		})
+
+		TeleportGrab = GuiLibrary["ObjectsThatCanBeSaved"]["BlatantWindow"]["Api"].CreateOptionsButton({
+			["Name"] = "TeleportGrab",
+			["Function"] = function(callback)
+				if callback then
+					createwarning("TeleportGrab", "This is very risky", 5)
+					while game:GetService("RunService").Heartbeat:Wait() and TeleportGrab.Enabled == true do
+						for i,v in next, game.Workspace.Items:GetChildren() do
+							for _,e in pairs(v:GetChildren()) do
+								if e.ClassName == "Part" then
+									if v.Name ~= TeleportIgnored1.Value or v.Name ~= TeleportIgnored2.Value or v.Name ~= TeleportIgnored3.Value or v.Name ~= TeleportIgnored4.Value or 
+										v.Name ~= TeleportIgnored5.Value or v.Name ~= TeleportIgnored6.Value or v.Name ~= TeleportIgnored7.Value or v.Name ~= TeleportIgnored8.Value or 
+										v.Name ~= TeleportIgnored9.Value or v.Name ~= TeleportIgnored10.Value then
+										if TeleportUseless1.Value == true then
+											if v.Name ~= "Egg" or v.Name ~= "Log" or v.Name ~= "Leaves" or v.Name ~= "Ice Cube" or v.Name ~= "Barley" or v.Name ~= "Peeper Popsicle" then
+												game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(e.Position + Vector3.new(0,4,0))
+												wait(0.05)
+											end
+										end
+										if TeleportUseless1.Value == false then
+											game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(e.Position + Vector3.new(0,4,0))
+											wait(0.05)
+										end
+									end
+								end
+							end
+						end
+					end
+				else
+					createnotification("TeleportGrab", "TeleportGrab has been turned Off", 3)
+				end
+			end,
+			["HoverText"] = "teleport to items instantly",
+			["Default"] = false,
+			["ExtraText"] = function() return " " end
+		})
+		TeleportUseless1 = TeleportGrab.CreateToggle({
+			["Name"] = "Ignore Useless Items",
+			["HoverText"] = "Egg, Leaves, Logs, IceCubes, Barley, Peeper Popsicle",
+			["Function"] = function(callback)
+				if callback then
+
+				else
+				end
+			end,
+			["Default"] = false
+		})
+		TeleportIgnored1 = TeleportGrab.CreateTextBox({
+			["Name"] = "Ignore Item",
+			["TempText"] = "Item Name",
+			["HoverText"] = "dosent grab the item put name to ignore the item"
+		})
+		TeleportIgnored2 = TeleportGrab.CreateTextBox({
+			["Name"] = "Ignore Item",
+			["TempText"] = "Item Name",
+			["HoverText"] = "dosent grab the item put name to ignore the item"
+		})
+		TeleportIgnored3 = TeleportGrab.CreateTextBox({
+			["Name"] = "Ignore Item",
+			["TempText"] = "Item Name",
+			["HoverText"] = "dosent grab the item put name to ignore the item"
+		})
+		TeleportIgnored4 = TeleportGrab.CreateTextBox({
+			["Name"] = "Ignore Item",
+			["TempText"] = "Item Name",
+			["HoverText"] = "dosent grab the item put name to ignore the item"
+		})
+		TeleportIgnored5 = TeleportGrab.CreateTextBox({
+			["Name"] = "Ignore Item",
+			["TempText"] = "Item Name",
+			["HoverText"] = "dosent grab the item put name to ignore the item"
+		})
+		TeleportIgnored6 = TeleportGrab.CreateTextBox({
+			["Name"] = "Ignore Item",
+			["TempText"] = "Item Name",
+			["HoverText"] = "dosent grab the item put name to ignore the item"
+		})
+		TeleportIgnored7 = TeleportGrab.CreateTextBox({
+			["Name"] = "Ignore Item",
+			["TempText"] = "Item Name",
+			["HoverText"] = "dosent grab the item put name to ignore the item"
+		})
+		TeleportIgnored8 = TeleportGrab.CreateTextBox({
+			["Name"] = "Ignore Item",
+			["TempText"] = "Item Name",
+			["HoverText"] = "dosent grab the item put name to ignore the item"
+		})
+		TeleportIgnored9 = TeleportGrab.CreateTextBox({
+			["Name"] = "Ignore Item",
+			["TempText"] = "Item Name",
+			["HoverText"] = "dosent grab the item put name to ignore the item"
+		})
+		TeleportIgnored10 = TeleportGrab.CreateTextBox({
+			["Name"] = "Ignore Item",
+			["TempText"] = "Item Name",
+			["HoverText"] = "dosent grab the item put name to ignore the item"
+		})
+
+		AutoBreak = GuiLibrary["ObjectsThatCanBeSaved"]["BlatantWindow"]["Api"].CreateOptionsButton({
+			["Name"] = "AutoBreak",
+			["Function"] = function(callback)
+				if callback then
+					local mouse = game:GetService("Players").LocalPlayer:GetMouse()
+					local breaking=false
+					mouse.Button1Down:connect(function()
+						breaking = true
+						while breaking and AutoBreak.Enabled == true and wait(0.05) do
+							local part = game:GetService("Players").LocalPlayer:GetMouse().Target
+							local one = game:GetService("ReplicatedStorage").RelativeTime.Value
+							local two = {part,part,part,part}
+							game:GetService("ReplicatedStorage").Events.SwingTool:FireServer(one, two)
+						end
+					end)
+					mouse.Button1Down:connect(function(key)
+						breaking = false
+					end)
+					createnotification("AutoBreak", "AutoBreak has been turned On", 3)
+				else
+					createnotification("AutoBreak", "AutoBreak has been turned Off", 3)
+				end
+			end,
+			["HoverText"] = "Break resources faster",
+			["Default"] = false,
+			["ExtraText"] = function() return " " end
+		})
+
+		local repeatedPickup = 50
+		local pickupRange = 50
+		AutoPickup = GuiLibrary["ObjectsThatCanBeSaved"]["BlatantWindow"]["Api"].CreateOptionsButton({
+			["Name"] = "AutoPickup",
+			["Function"] = function(callback)
+				if callback then
+					createnotification("AutoPickup", "AutoPickup has been turned On", 3)
+					BindToStepped("AutoPickup", repeatedPickup, function()
+						if AutoPickup.Enabled == true then
+							for i,v in pairs(game.Workspace.Items:GetChildren()) do
+								if v.ClassName == "Model" then
+									for _,p in pairs(v:GetChildren()) do
+										if p.ClassName == "Part" and AutoPickup.Enabled == true then
+											if (game.Players.LocalPlayer.Character.HumanoidRootPart.Position - p.Position).magnitude < pickupRange then
+												game:GetService("ReplicatedStorage").Events.PickupItem:InvokeServer(v, v.ClassName)
+											end
+										end
+									end
+								end
+							end
+						end
+					end)
+				else
+					createnotification("AutoPickup", "AutoPickup has been turned Off", 3)
+				end
+			end,
+			["HoverText"] = "Auto pickups the item that is near you",
+			["Default"] = false,
+			["ExtraText"] = function() return " " end
+		})
+
+		AutoPickup.CreateSlider({
+			["Name"] = "Repeat",
+			["Min"] = 5,
+			["Max"] = 50,
+			["Function"] = function(val)
+				repeatedPickup = val
+			end,
+			["HoverText"] = "set how much times it repeasts more is better and faster",
+			["Default"] = 10
+		})
+		AutoPickup.CreateSlider({
+			["Name"] = "Distance",
+			["Min"] = 5,
+			["Max"] = 25,
+			["Function"] = function(val)
+				pickupRange = val
+			end,
+			["HoverText"] = "pickup everything in a 15 radius nah lets make it 25",
+			["Default"] = 10
+		})
+
+		AutoCraft = GuiLibrary["ObjectsThatCanBeSaved"]["BlatantWindow"]["Api"].CreateOptionsButton({
+			["Name"] = "AutoCraft",
+			["Function"] = function(callback)
+				if callback then
+					createnotification("AutoCraft", "AutoCraft has been turned On", 3)
+					while game:GetService("RunService").Heartbeat:Wait() and AutoCraft.Enabled == true do
+						game:GetService("ReplicatedStorage").Events.DropBagItem:FireServer(AutoDropItem.Value)
+					end
+				else
+					createnotification("AutoCraft", "AutoCraft has been turned Off", 3)
+				end
+			end,
+			["HoverText"] = "craft items kinda useless",
+			["Default"] = false,
+			["ExtraText"] = function() return " " end
+		})
+		AutoCraftItem = AutoCraft.CreateTextBox({
+			["Name"] = "Item",
+			["TempText"] = "Item Name",
+			["HoverText"] = "craft the item you want"
+		})
+
+		AutoDrop = GuiLibrary["ObjectsThatCanBeSaved"]["BlatantWindow"]["Api"].CreateOptionsButton({
+			["Name"] = "AutoDrop",
+			["Function"] = function(callback)
+				if callback then
+					createnotification("AutoDrop", "AutoDrop has been turned On", 3)
+					while game:GetService("RunService").Heartbeat:Wait() and AutoDrop.Enabled == true do
+						game:GetService("ReplicatedStorage").Events.DropBagItem:FireServer(AutoDropItem.Value)
+					end
+				else
+					createnotification("AutoDrop", "AutoDrop has been turned Off", 3)
+				end
+			end,
+			["HoverText"] = "Auto drop if you need to drop items fast and your tired",
+			["Default"] = false,
+			["ExtraText"] = function() return " " end
+		})
+		AutoDropItem = AutoDrop.CreateTextBox({
+			["Name"] = "Item",
+			["TempText"] = "Item Name",
+			["HoverText"] = "drop the item you want"
+		})
+
+		Fly = GuiLibrary["ObjectsThatCanBeSaved"]["BlatantWindow"]["Api"].CreateOptionsButton({
+			["Name"] = "Fly",
+			["Function"] = function(callback)
+				if callback then
+					createnotification("Fly", "Fly has been turned On", 3)
+					onSelected()
+				else
+					createnotification("Fly", "Fly has been turned Off", 3)
+					onDeselected()
+				end
+			end,
+			["HoverText"] = "Just fly and your god but you cant hit anyone",
+			["Default"] = false,
+			["ExtraText"] = function() return " " end
+		})
+
+		FlySpeed = Fly.CreateSlider({
+			["Name"] = "Power",
+			["Min"] = 100,
+			["Max"] = 5000,
+			["Function"] = function(val)
+
+			end,
+			["HoverText"] = "set the fly power",
+			["Default"] = 500
+		})
+
+		Gravity = GuiLibrary["ObjectsThatCanBeSaved"]["BlatantWindow"]["Api"].CreateOptionsButton({
+			["Name"] = "Gravity",
+			["Function"] = function(callback)
+				if callback then
+					createnotification("Gravity", "Gravity has been turned On", 3)
+
+					if Gravity.Enabled == true then
+						local newindex = getrawmetatable(game).__newindex;
+						setreadonly(getrawmetatable(game),false);
+
+						getrawmetatable(game).__newindex = function(t,i,v)
+							if i=="Gravity" and not checkcaller() and Gravity.Enabled == true then
+								return newindex(t,i,16);
+							end
+							return newindex(t,i,v);
+						end
+					end
+					while game:GetService("RunService").Heartbeat:Wait()and Gravity.Enabled == true do
+						game.Workspace.Gravity = GravityPower.Value
+					end
+
+				else
+					game.Workspace.Gravity = 196.2
+					createnotification("Gravity", "Gravity has been turned Off", 3)
+				end
+			end,
+			["HoverText"] = "change the gravity and stay in the sky for much more longer time",
+			["Default"] = false,
+			["ExtraText"] = function() return " " end
+		})
+		GravityPower = Gravity.CreateSlider({
+			["Name"] = "Gravity",
+			["Min"] = 5,
+			["Max"] = 196,
+			["Function"] = function(val)
+
+			end,
+			["HoverText"] = "Set the gravity power the less the slower you will fall",
+			["Default"] = 196
+		})
+
+		InfiniteJump = GuiLibrary["ObjectsThatCanBeSaved"]["BlatantWindow"]["Api"].CreateOptionsButton({
+			["Name"] = "InfiniteJump",
+			["Function"] = function(callback)
+				if callback then
+					createnotification("InfiniteJump", "InfiniteJump has been turned On", 3)
+
+					local Player = game:GetService'Players'.LocalPlayer;
+					local UIS = game:GetService'UserInputService';
+
+					function Action(Object, Function)
+						if Object ~= nil then 
+							Function(Object);
+						end
+					end
+
+					UIS.InputBegan:connect(function(UserInput)
+						if UserInput.UserInputType == Enum.UserInputType.Keyboard and UserInput.KeyCode == Enum.KeyCode.Space and InfiniteJump.Enabled == true then
+							Action(Player.Character.Humanoid, function(self)
+								if self:GetState() == Enum.HumanoidStateType.Jumping or self:GetState() == Enum.HumanoidStateType.Freefall then
+									Action(self.Parent.HumanoidRootPart, function(self)
+										self.Velocity = Vector3.new(0, InfiniteJumpPower.Value, 0);
+									end)
+								end
+							end)
+						end
+					end)
+				else
+					createnotification("InfiniteJump", "InfiniteJump has been turned Off", 3)
+				end
+			end,
+			["HoverText"] = "jump in the sky",
+			["Default"] = false,
+			["ExtraText"] = function() return " " end
+		})
+		InfiniteJumpPower = InfiniteJump.CreateSlider({
+			["Name"] = "Power",
+			["Min"] = 30,
+			["Max"] = 300,
+			["Function"] = function(val)
+
+			end,
+			["HoverText"] = "the ammount of power you will be doing to jump",
+			["Default"] = 50
+		})
+
+		Speed = GuiLibrary["ObjectsThatCanBeSaved"]["BlatantWindow"]["Api"].CreateOptionsButton({
+			["Name"] = "Speed",
+			["Function"] = function(callback)
+				if callback then
+					createnotification("Speed", "Speed has been turned On", 3)
+					local mouse = game:GetService("Players").LocalPlayer:GetMouse()
+					mouse.KeyDown:connect(function(key)
+						if key == "w" and Speed.Enabled == true then
+							loop = true
+							while loop and Speed.Enabled == true do
+								local char2 = game.Workspace.Characters:FindFirstChild(game.Players.LocalPlayer.Name)
+								if char2:FindFirstChild("HumanoidRootPart") then
+									local hum = char2:FindFirstChild("HumanoidRootPart")
+
+									hum.CFrame = hum.CFrame + hum.CFrame.lookVector * SpeedPower.Value / 10
+									game:GetService("RunService").Heartbeat:Wait()
+								end
+							end
+						end
+					end)
+
+					mouse.KeyUp:connect(function(key)
+						if key == "w" then
+							loop = false
+						end
+					end)
+
+					mouse.KeyDown:connect(function(key)
+						if key == "d" and Speed.Enabled == true and CamLock == false then
+							loop2 = true
+							while loop2 and Speed.Enabled == true do
+								local char2 = game.Workspace.Characters:FindFirstChild(game.Players.LocalPlayer.Name)
+								if char2:FindFirstChild("HumanoidRootPart") then
+									local hum = char2:FindFirstChild("HumanoidRootPart")
+
+									hum.CFrame = hum.CFrame + hum.CFrame.lookVector * SpeedPower.Value / 10
+									game:GetService("RunService").Heartbeat:Wait()
+								end
+							end
+						end
+					end)
+
+					mouse.KeyUp:connect(function(key)
+						if key == "d" then
+							loop2 = false
+						end
+					end)
+
+					mouse.KeyDown:connect(function(key)
+						if key == "a" and Speed.Enabled == true and CamLock == false then
+							loop3 = true
+							while loop3 and Speed.Enabled == true do
+								local char2 = game.Workspace.Characters:FindFirstChild(game.Players.LocalPlayer.Name)
+								if char2:FindFirstChild("HumanoidRootPart") then
+									local hum = char2:FindFirstChild("HumanoidRootPart")
+
+									hum.CFrame = hum.CFrame + hum.CFrame.lookVector * SpeedPower.Value / 10
+									game:GetService("RunService").Heartbeat:Wait()
+								end
+							end
+						end
+					end)
+
+					mouse.KeyUp:connect(function(key)
+						if key == "a" then
+							loop3 = false
+						end
+					end)
+
+					mouse.KeyDown:connect(function(key)
+						if key == "s" and Speed.Enabled == true then
+							loop4 = true
+							while loop4 and Speed.Enabled == true do
+								local char2 = game.Workspace.Characters:FindFirstChild(game.Players.LocalPlayer.Name)
+								if char2:FindFirstChild("HumanoidRootPart") then
+									local hum = char2:FindFirstChild("HumanoidRootPart")
+
+									hum.CFrame = hum.CFrame + hum.CFrame.lookVector * SpeedPower.Value / 10
+									game:GetService("RunService").Heartbeat:Wait()
+								end
+							end
+						end
+					end)
+
+					mouse.KeyUp:connect(function(key)
+						if key == "s" then
+							loop4 = false
+						end
+					end)
+				else
+					createnotification("Speed", "Speed has been turned Off", 3)
+				end
+			end,
+			["HoverText"] = "goes more faster",
+			["Default"] = false,
+			["ExtraText"] = function() return " " end
+		})
+		SpeedPower = Speed.CreateSlider({
+			["Name"] = "Power",
+			["Min"] = 1,
+			["Max"] = 100,
+			["Function"] = function(val)
+
+			end,
+			["HoverText"] = "change how much you wanna move",
+			["Default"] = 10
+		})
+
+		NoSlowDown = GuiLibrary["ObjectsThatCanBeSaved"]["BlatantWindow"]["Api"].CreateOptionsButton({
+			["Name"] = "NoSlowdown",
+			["Function"] = function(callback)
+				if callback then
+					createnotification("NoSlowDown", "NoSlowDown has been turned On", 3)
+					if NoSlowDown.Enabled == true then
+						local newindex = getrawmetatable(game).__newindex;
+						setreadonly(getrawmetatable(game),false);
+
+						getrawmetatable(game).__newindex = function(t,i,v)
+							if i=="WalkSpeed" and not checkcaller() and NoSlowDown.Enabled == true then
+								return newindex(t,i,16);
+							end
+							return newindex(t,i,v);
+						end
+					end
+				else
+					createnotification("NoSlowDown", "NoSlowDown has been turned Off", 3)
+				end
+			end,
+			["HoverText"] = "cant be slown on water",
+			["Default"] = false,
+			["ExtraText"] = function() return " " end
+		})
+	end)
+
+	runcode(function()
+
+		local MaxDistance = {["Enabled"] = false}
+		local MaxDistanceVal = {["Value"] = 1000}
+
+		local EntityESP = {["Enabled"] = false}
+		local SharkESP = {["Value"] = false}
+		local EntityESPColor = {["Value"] = 0.44}
+
+		local PlayerESP = {["Enabled"] = false}
+		local PlayerESPColor = {["Value"] = 0.44}
+
+		local ObjectESP = {["Enabled"] = false}
+		local TotemESP = {["Value"] = false}
+		local ObjectESPColor = {["Value"] = 0.44}
+
+		local FieldOfView = {["Enabled"] = false}
+		local FieldOfViewValue = {["Value"] = 500}
+
+		local FullBright = {["Enabled"] = false}
+
+		local NoBob = {["Enabled"] = false}
+		local FPSBoost = {["Enabled"] = false}
+
+		MaxDistance = GuiLibrary["ObjectsThatCanBeSaved"]["RenderWindow"]["Api"].CreateOptionsButton({
+			["Name"] = "MaxDistance",
+			["Function"] = function(callback) if callback then
+					createnotification("FieldOfView", "FieldOfView has been turned On", 3)
+					while wait() and MaxDistance.Enabled == true do
+						game.Players.LocalPlayer.CameraMaxZoomDistance = MaxDistanceVal.Value
+					end
+
+				else
+					game.Players.LocalPlayer.CameraMaxZoomDistance = 400
+					createnotification("MaxDistance", "MaxDistance has been turned Off", 3)
+				end
+			end,
+			["HoverText"] = "zoom out more farther",
+			["Default"] = false,
+			["ExtraText"] = function() return " Placeholder" end
+		})
+		MaxDistanceVal = MaxDistance.CreateSlider({
+			["Name"] = "Distance",
+			["Min"] = 400,
+			["Max"] = 1000,
+			["Function"] = function(val)
+			end,
+			["HoverText"] = "change your distance",
+			["Default"] = 1000
+		})
+
+		NoBob = GuiLibrary["ObjectsThatCanBeSaved"]["RenderWindow"]["Api"].CreateOptionsButton({
+			["Name"] = "NoBob",
+			["Function"] = function(callback) if callback then
+					game.Workspace.Characters:FindFirstChild(game.Players.LocalPlayer.Name).Humanoid.Died:Connect(function()
+						local AnimationId = "507768375"
+						local Anim = Instance.new("Animation")
+						Anim.AnimationId = "rbxassetid://"..AnimationId
+						local k = game.Workspace.Characters:FindFirstChild(game.Players.LocalPlayer.Name).Humanoid:LoadAnimation(Anim)
+						k:Play()
+					end)
+					local AnimationId = "507768375"
+					local Anim = Instance.new("Animation")
+					Anim.AnimationId = "rbxassetid://"..AnimationId
+					local k = game.Workspace.Characters:FindFirstChild(game.Players.LocalPlayer.Name).Humanoid:LoadAnimation(Anim)
+					k:Play()
+					createnotification("NoBob", "NoBob has been turned On", 3)
+				else
+					local AnimationId = "507768375"
+					local Anim = Instance.new("Animation")
+					Anim.AnimationId = "rbxassetid://"..AnimationId
+					local k = game.Workspace.Characters:FindFirstChild(game.Players.LocalPlayer.Name).Humanoid:LoadAnimation(Anim)
+					k:Stop()
+					createnotification("NoBob", "NoBob has been turned Off", 3)
+				end
+			end,
+			["HoverText"] = "no need to move hands and makes it easier to fight",
+			["Default"] = false,
+			["ExtraText"] = function() return " Placeholder" end
+		})
+
+		PlayerESP = GuiLibrary["ObjectsThatCanBeSaved"]["RenderWindow"]["Api"].CreateOptionsButton({
+			["Name"] = "PlayerESP",
+			["Function"] = function(callback) if callback then
+					createnotification("PlayerESP", "PlayerESP has been turned On", 3)
+					while wait(0.1) do
+						if PlayerESP.Enabled == false then
+							for i,v in pairs(game.Players:GetChildren()) do
+								if v.Character:FindFirstChild("HumanoidRootPart") then
+									if v.Character:FindFirstChild("HumanoidRootPart"):FindFirstChild("Nametag") then
+										v.Character:FindFirstChild("HumanoidRootPart"):FindFirstChild("Nametag"):Destroy()
+									end
+								end
+							end					
+						end
+						if PlayerESP.Enabled == true then
+							for i,v in pairs(game.Players:GetChildren()) do
+								if v.Character.HumanoidRootPart:FindFirstChild("Nametag") then
+									v.Character:FindFirstChild("HumanoidRootPart"):FindFirstChild("Nametag"):Destroy()
+									local Attachment = Instance.new("Attachment")
+									local BillboardGui = Instance.new("BillboardGui")
+									local TextLabel = Instance.new("TextLabel")
+
+									Attachment.Name = "Nametag"
+									Attachment.Parent = v.Character:FindFirstChild("HumanoidRootPart")
+									Attachment.Position = Vector3.new(0, 4, 0)
+
+									BillboardGui.Parent = Attachment
+									BillboardGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+									BillboardGui.Active = true
+									BillboardGui.AlwaysOnTop = true
+									BillboardGui.LightInfluence = 1.000
+									BillboardGui.Size = UDim2.new(0.100000001, 200, 0.100000001, 50)
+
+									TextLabel.Parent = BillboardGui
+									TextLabel.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+									TextLabel.BackgroundTransparency = 1.000
+									TextLabel.Size = UDim2.new(0, 200, 0, 50)
+									TextLabel.Font = Enum.Font.Nunito
+									TextLabel.Text = v.Name
+									TextLabel.TextColor3 = Color3.fromHSV(PlayerESPColor["Hue"], PlayerESPColor["Sat"], PlayerESPColor["Value"])
+									TextLabel.TextSize = 23.000
+									TextLabel.TextStrokeTransparency = 0.700
+									TextLabel.TextYAlignment = Enum.TextYAlignment.Top
+								end
+								if v.Character.HumanoidRootPart:FindFirstChild("Nametag") == nil then
+									local Attachment = Instance.new("Attachment")
+									local BillboardGui = Instance.new("BillboardGui")
+									local TextLabel = Instance.new("TextLabel")
+
+									Attachment.Name = "Nametag"
+									Attachment.Parent = v.Character:FindFirstChild("HumanoidRootPart")
+									Attachment.Position = Vector3.new(0, 4, 0)
+
+									BillboardGui.Parent = Attachment
+									BillboardGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+									BillboardGui.Active = true
+									BillboardGui.AlwaysOnTop = true
+									BillboardGui.LightInfluence = 1.000
+									BillboardGui.Size = UDim2.new(0.100000001, 200, 0.100000001, 50)
+
+									TextLabel.Parent = BillboardGui
+									TextLabel.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+									TextLabel.BackgroundTransparency = 1.000
+									TextLabel.Size = UDim2.new(0, 200, 0, 50)
+									TextLabel.Font = Enum.Font.Nunito
+									TextLabel.Text = v.Name
+									TextLabel.TextColor3 = Color3.fromHSV(PlayerESPColor["Hue"], PlayerESPColor["Sat"], PlayerESPColor["Value"])
+									TextLabel.TextSize = 23.000
+									TextLabel.TextStrokeTransparency = 0.700
+									TextLabel.TextYAlignment = Enum.TextYAlignment.Top
+								end
+							end
+						end
+					end
+				else
+					createnotification("PlayerESP", "PlayerESP has been turned Off", 3)
+				end
+			end,
+			["HoverText"] = "view players names from far away",
+			["Default"] = false,
+			["ExtraText"] = function() return " Placeholder" end
+		})
+
+		PlayerESPColor = PlayerESP.CreateColorSlider({
+			["Name"] = "ESP Color",
+			["HoverText"] = "changes the color on the nametag",
+			["Function"] = function(val)
+			end
+		})
+
+		EntityESP = GuiLibrary["ObjectsThatCanBeSaved"]["RenderWindow"]["Api"].CreateOptionsButton({
+			["Name"] = "EntityESP",
+			["Function"] = function(callback) if callback then
+					createnotification("EntityESP", "EntityESP has been turned On", 3)
+					while wait(0.1) do
+						pcall(function()
+							if SharkESP.Enabled == false or EntityESP.Enabled == false then
+								for i,v in pairs(game.Workspace.Critters:GetChildren()) do
+									if v:FindFirstChild("Nametag") and v.Name == "Lurky Boi" then
+										v:FindFirstChild("Nametag"):Destroy()
+									end
+								end					
+							end
+							if SharkESP.Enabled == true and EntityESP.Enabled == true then
+								for i,v in pairs(game.Workspace.Critters:GetChildren()) do
+									if v:FindFirstChild("Nametag") and v.Name == "Lurky Boi" then
+										v:FindFirstChild("Nametag"):Destroy()
+										local BillboardGui = Instance.new("BillboardGui")
+										local TextLabel = Instance.new("TextLabel")
+
+										BillboardGui.Name = "Nametag"
+										BillboardGui.Parent = v
+										BillboardGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+										BillboardGui.Active = true
+										BillboardGui.AlwaysOnTop = true
+										BillboardGui.LightInfluence = 1.000
+										BillboardGui.Size = UDim2.new(0.100000001, 200, 0.100000001, 50)
+
+										TextLabel.Parent = BillboardGui
+										TextLabel.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+										TextLabel.BackgroundTransparency = 1.000
+										TextLabel.Size = UDim2.new(0, 200, 0, 50)
+										TextLabel.Font = Enum.Font.Nunito
+										TextLabel.Text = tostring(v.Name)
+										TextLabel.TextColor3 = Color3.fromHSV(EntityESPColor["Hue"], EntityESPColor["Sat"], EntityESPColor["Value"])
+										TextLabel.TextSize = 23.000
+										TextLabel.TextStrokeTransparency = 0.700
+										TextLabel.TextYAlignment = Enum.TextYAlignment.Top
+									else
+										local BillboardGui = Instance.new("BillboardGui")
+										local TextLabel = Instance.new("TextLabel")
+
+										BillboardGui.Name = "Nametag"
+										BillboardGui.Parent = v
+										BillboardGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+										BillboardGui.Active = true
+										BillboardGui.AlwaysOnTop = true
+										BillboardGui.LightInfluence = 1.000
+										BillboardGui.Size = UDim2.new(0.100000001, 200, 0.100000001, 50)
+
+										TextLabel.Parent = BillboardGui
+										TextLabel.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+										TextLabel.BackgroundTransparency = 1.000
+										TextLabel.Size = UDim2.new(0, 200, 0, 50)
+										TextLabel.Font = Enum.Font.Nunito
+										TextLabel.Text = tostring(v.Name)
+										TextLabel.TextColor3 = Color3.fromHSV(EntityESPColor["Hue"], EntityESPColor["Sat"], EntityESPColor["Value"])
+										TextLabel.TextSize = 23.000
+										TextLabel.TextStrokeTransparency = 0.700
+										TextLabel.TextYAlignment = Enum.TextYAlignment.Top
+									end
+								end
+							end
+						end)
+					end
+				else
+					createnotification("EntityESP", "EntityESP has been turned Off", 3)
+				end
+			end,
+			["HoverText"] = "view objects from far away",
+			["Default"] = false,
+			["ExtraText"] = function() return " Placeholder" end
+		})
+		SharkESP = EntityESP.CreateToggle({
+			["Name"] = "Sharks",
+			["HoverText"] = "show sharks",
+			["Function"] = function(callback)
+				if callback then
+
+				else
+				end
+			end,
+			["Default"] = true
+		})
+		EntityESPColor = EntityESP.CreateColorSlider({
+			["Name"] = "ESP Color",
+			["HoverText"] = "changes the color on the nametag",
+			["Function"] = function(val)
+			end
+		})
+
+		FieldOfView = GuiLibrary["ObjectsThatCanBeSaved"]["RenderWindow"]["Api"].CreateOptionsButton({
+			["Name"] = "FieldOfView",
+			["Function"] = function(callback) if callback then
+					createnotification("FieldOfView", "FieldOfView has been turned On", 3)
+					while wait() and FieldOfView.Enabled == true do
+						game.Workspace.CurrentCamera.FieldOfView = FieldOfViewValue.Value
+					end
+
+				else
+					game.Workspace.CurrentCamera.FieldOfView = 70
+					createnotification("FieldOfView", "FieldOfView has been turned Off", 3)
+				end
+			end,
+			["HoverText"] = "make your screen go wider",
+			["Default"] = false,
+			["ExtraText"] = function() return " Placeholder" end
+		})
+
+		FieldOfViewValue = FieldOfView.CreateSlider({
+			["Name"] = "Field Of View",
+			["Min"] = 10,
+			["Max"] = 120,
+			["Function"] = function(val)
+			end,
+			["HoverText"] = "change your view and make your screen more wider",
+			["Default"] = 70
+		})
+		FullBright = GuiLibrary["ObjectsThatCanBeSaved"]["RenderWindow"]["Api"].CreateOptionsButton({
+			["Name"] = "FullBright",
+			["Function"] = function(callback) if callback then
+					game.Lighting.GlobalShadows = false
+					createnotification("FullBright", "FullBright has been turned On", 3)
+				else
+					game.Lighting.GlobalShadows = true
+					createnotification("FullBright", "FullBright has been turned Off", 3)
+				end
+			end,
+			["HoverText"] = "no shadows so torches are useless",
+			["Default"] = false,
+			["ExtraText"] = function() return " Placeholder" end
+		})
+		FPSBoost = GuiLibrary["ObjectsThatCanBeSaved"]["RenderWindow"]["Api"].CreateOptionsButton({
+			["Name"] = "FPSBoost",
+			["Function"] = function(callback) if callback then
+					createnotification("FPSBoost", "FPSBoost has been turned On", 3)
+					setfpscap(90)
+				else
+					createnotification("FPSBoost", "FPSBoost has been turned Off", 3)
+					setfpscap(60)
+				end
+			end,
+			["HoverText"] = "get more fps",
+			["Default"] = false,
+			["ExtraText"] = function() return " Placeholder" end
+		})
+
+		ObjectESP = GuiLibrary["ObjectsThatCanBeSaved"]["RenderWindow"]["Api"].CreateOptionsButton({
+			["Name"] = "ObjectESP",
+			["Function"] = function(callback) if callback then
+					createnotification("ObjectESP", "ObjectESP has been turned On", 3)
+					while wait(0.1) do
+						pcall(function()
+							if TotemESP.Enabled == false or ObjectESP.Enabled == false then
+								for i,v in pairs(game.Workspace.Totems:GetChildren()) do
+									if v:FindFirstChild("Nametag") then
+										v:FindFirstChild("Nametag"):Destroy()
+									end
+								end					
+							end
+							if TotemESP.Enabled == true and ObjectESP.Enabled == true then
+								for i,v in pairs(game.Workspace.Totems:GetChildren()) do
+									if v:FindFirstChild("Nametag") then
+										v:FindFirstChild("Nametag"):Destroy()
+										local BillboardGui = Instance.new("BillboardGui")
+										local TextLabel = Instance.new("TextLabel")
+
+										BillboardGui.Name = "Nametag"
+										BillboardGui.Parent = v
+										BillboardGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+										BillboardGui.Active = true
+										BillboardGui.AlwaysOnTop = true
+										BillboardGui.LightInfluence = 1.000
+										BillboardGui.Size = UDim2.new(0.100000001, 200, 0.100000001, 50)
+
+										TextLabel.Parent = BillboardGui
+										TextLabel.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+										TextLabel.BackgroundTransparency = 1.000
+										TextLabel.Size = UDim2.new(0, 200, 0, 50)
+										TextLabel.Font = Enum.Font.Nunito
+										TextLabel.Text = tostring(v.TribeColor.Value)
+										TextLabel.TextColor3 = Color3.fromHSV(ObjectESPColor["Hue"], ObjectESPColor["Sat"], ObjectESPColor["Value"])
+										TextLabel.TextSize = 23.000
+										TextLabel.TextStrokeTransparency = 0.700
+										TextLabel.TextYAlignment = Enum.TextYAlignment.Top
+									else
+										local BillboardGui = Instance.new("BillboardGui")
+										local TextLabel = Instance.new("TextLabel")
+
+										BillboardGui.Name = "Nametag"
+										BillboardGui.Parent = v
+										BillboardGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+										BillboardGui.Active = true
+										BillboardGui.AlwaysOnTop = true
+										BillboardGui.LightInfluence = 1.000
+										BillboardGui.Size = UDim2.new(0.100000001, 200, 0.100000001, 50)
+
+										TextLabel.Parent = BillboardGui
+										TextLabel.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+										TextLabel.BackgroundTransparency = 1.000
+										TextLabel.Size = UDim2.new(0, 200, 0, 50)
+										TextLabel.Font = Enum.Font.Nunito
+										TextLabel.Text = tostring(v.TribeColor.Value)
+										TextLabel.TextColor3 = Color3.fromHSV(ObjectESPColor["Hue"], ObjectESPColor["Sat"], ObjectESPColor["Value"])
+										TextLabel.TextSize = 23.000
+										TextLabel.TextStrokeTransparency = 0.700
+										TextLabel.TextYAlignment = Enum.TextYAlignment.Top
+									end
+								end
+							end
+						end)
+					end
+				else
+					createnotification("ObjectESP", "ObjectESP has been turned Off", 3)
+				end
+			end,
+			["HoverText"] = "view objects from far away",
+			["Default"] = false,
+			["ExtraText"] = function() return " Placeholder" end
+		})
+		TotemESP = ObjectESP.CreateToggle({
+			["Name"] = "Totems",
+			["HoverText"] = "show totems",
+			["Function"] = function(callback)
+				if callback then
+
+				else
+				end
+			end,
+			["Default"] = true
+		})
+		ObjectESPColor = ObjectESP.CreateColorSlider({
+			["Name"] = "ESP Color",
+			["HoverText"] = "changes the color on the nametag",
+			["Function"] = function(val)
+			end
+		})
+	end)
+
+	runcode(function()
+		local AutoInvite = {["Enabled"] = false}
+		local InviteDelay = {["Value"] = 100}
+
+		local OpenCrate = {["Enabled"] = false}
+		local CrateDelay = {["Value"] = 10}
+		local KindOfCrate = {["Value"] = "Food Chest"}
+
+		local CanLock = {["Enabled"] = false}
+		local trueScale = {["Value"] = 1}
+
+		local GlitchedAvatar = {["Enabled"] = false}
+		local UIScale = {["Enabled"] = false}
+		local AutoLeave = {["Enabled"] = false}
+		local CanLock = {["Enabled"] = false}
+		local trueScale = {["Value"] = 1}
+
+		AutoInvite = GuiLibrary["ObjectsThatCanBeSaved"]["UtilityWindow"]["Api"].CreateOptionsButton({
+			["Name"] = "AutoInvite",
+			["Function"] = function(callback)
+				if callback then
+					createnotification("AutoInvite", "AutoInvite has been turned On", 3)
+					while wait(InviteDelay.Value / 10) and AutoInvite.Enabled == true do
+						for i,v in next, game.Players:GetChildren() do
+							game:GetService("ReplicatedStorage").Events.TribeInvite:FireServer(v)
+						end
+					end
+				else
+					createnotification("AutoInvite", "AutoInvite has been turned Off", 3)
+				end
+			end,
+			["HoverText"] = "Auto pickups the item that is near you",
+			["Default"] = false,
+			["ExtraText"] = function() return " " end
+		})
+
+		InviteDelay = AutoInvite.CreateSlider({
+			["Name"] = "Delay",
+			["Min"] = 5,
+			["Max"] = 50,
+			["Function"] = function(val)
+			end,
+			["HoverText"] = "1 slider = 0.1 seconds",
+			["Default"] = 10
+		})
+
+		OpenCrate = GuiLibrary["ObjectsThatCanBeSaved"]["UtilityWindow"]["Api"].CreateOptionsButton({
+			["Name"] = "AutoPurchaseChest",
+			["Function"] = function(callback) if callback then
+					createnotification("AutoPurchaseChest", "AutoPurchaseChest has been turned Off", 3)
+					while wait(1 / CrateDelay.Value) and OpenCrate.Enabled == true do
+						local args = {
+							[1] = KindOfCrate
+						}
+
+						game:GetService("ReplicatedStorage").Events.PurchaseChest:FireServer(unpack(args))
+
+					end
+				else
+					createnotification("AutoPurchaseChest", "AutoPurchaseChest has been turned Off", 3)
+				end
+			end,
+			["HoverText"] = "keeps buying crates", 
+			["Default"] = false,
+			["ExtraText"] = function() return " Placeholder" end
+		})
+		CrateDelay = OpenCrate.CreateSlider({
+			["Name"] = "Delay",
+			["Min"] = 10,
+			["Max"] = 500,
+			["Function"] = function(val)
+			end,
+			["HoverText"] = "every 10 on the slider is 0.1 seconds",
+			["Default"] = 100
+		})
+		KindOfCrate = OpenCrate.CreateDropdown({
+			["Name"] = "Select Chest",
+			["List"] = {"Food Chest", 
+				"Resource Chest",
+				"Essence Chest",
+				"Crystal Chest",
+				"Adurite Chest",
+				"Magnetite Chest",
+			},
+			["Function"] = function(val)
+			end
+		})
+
+
+		GlitchedAvatar = GuiLibrary["ObjectsThatCanBeSaved"]["UtilityWindow"]["Api"].CreateOptionsButton({
+			["Name"] = "Glitched Avatar",
+			["Function"] = function(callback) if callback then
+					while wait(1) and GlitchedAvatar.Enabled == true do
+						createnotification("Glitched Avatar", "Glitched Avatar has been turned On", 3)
+						local r = math.random(1, 18)
+						if r == 1 then
+							local args = {
+								[1] = "skin",
+								[2] = "Dark Brown"
+							}
+							game:GetService("ReplicatedStorage").Events.CosmeticChange:FireServer(unpack(args))
+						end
+						if r == 2 then
+							local args = {
+								[1] = "hair",
+								[2] = "Crazyhair"
+							}
+							game:GetService("ReplicatedStorage").Events.CosmeticChange:FireServer(unpack(args))
+						end
+						if r == 3 then
+
+							local args = {
+								[1] = "face",
+								[2] = "Beardy"
+							}
+							game:GetService("ReplicatedStorage").Events.CosmeticChange:FireServer(unpack(args))
+						end
+						if r == 4 then
+							local args = {
+								[1] = "skin",
+								[2] = "Pale"
+							}
+							game:GetService("ReplicatedStorage").Events.CosmeticChange:FireServer(unpack(args))
+						end
+						if r == 5 then
+							local args = {
+								[1] = "face",
+								[2] = "Freckles"
+							}
+							game:GetService("ReplicatedStorage").Events.CosmeticChange:FireServer(unpack(args))
+						end
+						if r == 6 then
+							local args = {
+								[1] = "hair",
+								[2] = "Brown Girl"
+							}
+							game:GetService("ReplicatedStorage").Events.CosmeticChange:FireServer(unpack(args))
+						end
+						if r == 7 then
+							local args = {
+								[1] = "face",
+								[2] = "Freckles"
+							}
+							game:GetService("ReplicatedStorage").Events.CosmeticChange:FireServer(unpack(args))
+						end
+						if r == 8 then
+							local args = {
+								[1] = "face",
+								[2] = "Smile"
+							}
+							game:GetService("ReplicatedStorage").Events.CosmeticChange:FireServer(unpack(args))
+						end
+						if r == 9 then
+							local args = {
+								[1] = "face",
+								[2] = "Unamused"
+							}
+							game:GetService("ReplicatedStorage").Events.CosmeticChange:FireServer(unpack(args))
+						end
+						if r == 10 then
+							local args = {
+								[1] = "face",
+								[2] = "Smile"
+							}
+							game:GetService("ReplicatedStorage").Events.CosmeticChange:FireServer(unpack(args))
+						end
+						if r == 11 then
+							local args = {
+								[1] = "skin",
+								[2] = "Light Brown"
+							}
+							game:GetService("ReplicatedStorage").Events.CosmeticChange:FireServer(unpack(args))
+						end
+						if r == 12 then
+							local args = {
+								[1] = "hair",
+								[2] = "Crazyhair"
+							}
+							game:GetService("ReplicatedStorage").Events.CosmeticChange:FireServer(unpack(args))
+						end
+						if r == 13 then
+							local args = {
+								[1] = "face",
+								[2] = "Cunning"
+							}
+							game:GetService("ReplicatedStorage").Events.CosmeticChange:FireServer(unpack(args))
+						end
+						if r == 14 then
+							local args = {
+								[1] = "skin",
+								[2] = "White"
+							}
+							game:GetService("ReplicatedStorage").Events.CosmeticChange:FireServer(unpack(args))
+						end
+						if r == 15 then
+							local args = {
+								[1] = "hair",
+								[2] = "none"
+							}
+							game:GetService("ReplicatedStorage").Events.CosmeticChange:FireServer(unpack(args))
+						end
+						if r == 16 then
+							local args = {
+								[1] = "hair",
+								[2] = "Blonde Girl"
+							}
+							game:GetService("ReplicatedStorage").Events.CosmeticChange:FireServer(unpack(args))
+						end
+						if r == 17 then
+							local args = {
+								[1] = "skin",
+								[2] = "Tan"
+							}
+							game:GetService("ReplicatedStorage").Events.CosmeticChange:FireServer(unpack(args))
+						end
+						if r == 18 then
+							local args = {
+								[1] = "hair",
+								[2] = "Blonde Boy"
+							}
+							game:GetService("ReplicatedStorage").Events.CosmeticChange:FireServer(unpack(args))
+						end
+					end
+				else
+					createnotification("Glitched Avatar", "Glitched Avatar has been turned Off", 3)
+
+				end
+			end,
+			["HoverText"] = "oh noo SPOOKY", 
+			["Default"] = false,
+			["ExtraText"] = function() return " Placeholder" end
+		})
+
+		UIScale = GuiLibrary["ObjectsThatCanBeSaved"]["UtilityWindow"]["Api"].CreateOptionsButton({
+			["Name"] = "UI Scale",
+			["Function"] = function(callback) if callback then
+					createnotification("UI Scale", "UI Scale has been turned Off", 3)
+					while game:GetService("RunService").Heartbeat:Wait() and UIScale.Enabled == true do
+						game:GetService("Players").SonicBotWasTaken.PlayerGui.MainGui.GlobalUIScale.Value = trueScale.Value / 50
+					end
+				else
+					createnotification("UI Scale", "UI Scale has been turned Off", 3)
+					game:GetService("Players").SonicBotWasTaken.PlayerGui.MainGui.GlobalUIScale.Value = 1
+
+				end
+			end,
+			["HoverText"] = "changes the scale of your gui", 
+			["Default"] = false,
+			["ExtraText"] = function() return " Placeholder" end
+		})
+		trueScale = UIScale.CreateSlider({
+			["Name"] = "Scale",
+			["Min"] = 1,
+			["Max"] = 100,
+			["Function"] = function(val)
+			end,
+			["HoverText"] = "changes the scale of your ui",
+			["Default"] = 50
+		})
+
+		CanLock = GuiLibrary["ObjectsThatCanBeSaved"]["UtilityWindow"]["Api"].CreateOptionsButton({
+			["Name"] = "Cam Lock",
+			["Function"] = function(callback) if callback then
+					createnotification("Cam Lock", "Cam Lock has been turned Off", 3)
+					local args = {
+						[1] = "camLock",
+						[2] = true
+					}
+
+					game:GetService("ReplicatedStorage").Events.ToggleUserSetting:FireServer(unpack(args))
+
+				else
+					createnotification("Cam Lock", "Cam Lock has been turned Off", 3)
+					local args = {
+						[1] = "camLock",
+						[2] = false
+					}
+
+					game:GetService("ReplicatedStorage").Events.ToggleUserSetting:FireServer(unpack(args))
+
+				end
+			end,
+			["HoverText"] = "toggle if you want your camera is locked or not", 
+			["Default"] = false,
+			["ExtraText"] = function() return " Placeholder" end
+		})
+
+		local Developers = true
+		local Moderators = true
+		local Shamans = true
+		local Testers = false
+
+		AutoLeave = GuiLibrary["ObjectsThatCanBeSaved"]["UtilityWindow"]["Api"].CreateOptionsButton({
+			["Name"] = "AutoLeave",
+			["Function"] = function(callback) if callback then
+					createnotification("AutoLeave", "AutoLeave has been turned Off", 3)
+					while game:GetService("RunService").Heartbeat:Wait() and AutoLeave.Enabled == true do
+						for i,v in pairs(game.Players:GetChildren()) do
+							local GroupID = 2841240
+							local plrRole = v:GetRoleInGroup(GroupID)
+
+							if plrRole == "TESTER" and Testers == true then
+								local msgbox = messagebox(tostring(v.Name),tostring(v.Name.." was a "..plrRole),4)
+								setfpscap(math.huge)
+							end
+							if plrRole == "SHAMAN" and Shamans == true then
+								local msgbox = messagebox(tostring(v.Name),tostring(v.Name.." was a "..plrRole),4)
+								setfpscap(math.huge)
+							end
+							if plrRole == "JUNIOR MODERATOR" and Moderators == true then
+								local msgbox = messagebox(tostring(v.Name),tostring(v.Name.." was a "..plrRole),4)
+								setfpscap(math.huge)
+							end
+							if plrRole == "MODERATOR" and Moderators == true then
+								local msgbox = messagebox(tostring(v.Name),tostring(v.Name.." was a "..plrRole),4)
+								setfpscap(math.huge)
+							end
+							if plrRole == "COMMUNITY MANAGER" and Developers == true then
+								local msgbox = messagebox(tostring(v.Name),tostring(v.Name.." was a "..plrRole),4)
+								setfpscap(math.huge)
+							end
+							if plrRole == "CO-DEV" and Developers == true then
+								local msgbox = messagebox(tostring(v.Name),tostring(v.Name.." was a "..plrRole),4)
+								setfpscap(math.huge)
+							end
+							if plrRole == "SOYBEEN" and Developers == true then
+								local msgbox = messagebox(tostring(v.Name),tostring(v.Name.." was a "..plrRole),4)
+								setfpscap(math.huge)
+							end
+						end
+					end
+				else
+					createnotification("AutoLeave", "AutoLeave has been turned Off", 3)
+
+				end
+			end,
+			["HoverText"] = "kicks you when someone has this in the group", 
+			["Default"] = false,
+			["ExtraText"] = function() return " Placeholder" end
+		})
+
+		AutoLeave.CreateToggle({
+			["Name"] = "Developers",
+			["HoverText"] = "leave on developers",
+			["Function"] = function(callback)
+				if callback then
+					Developers= true
+				else
+					Developers= false
+				end
+			end,
+			["Default"] = true
+		})
+		AutoLeave.CreateToggle({
+			["Name"] = "Moderators",
+			["HoverText"] = "leave on moderators",
+			["Function"] = function(callback)
+				if callback then
+					Moderators= true
+				else
+					Moderators= false
+				end
+			end,
+			["Default"] = true
+		})
+		AutoLeave.CreateToggle({
+			["Name"] = "Shamans",
+			["HoverText"] = "leaves on shamans",
+			["Function"] = function(callback)
+				if callback then
+					Shamans= true
+				else
+					Shamans= false
+				end
+			end,
+			["Default"] = false
+		})
+		AutoLeave.CreateToggle({
+			["Name"] = "Testers",
+			["HoverText"] = "leaves on testers",
+			["Function"] = function(callback)
+				if callback then
+					Testers= true
+				else
+					Testers= false
+				end
+			end,
+			["Default"] = false
+		})
+
+
+	end)
+
+	runcode(function()
+		local AntiRubble = {["Enabled"] = false}
+		local OpenCrate2 = {["Enabled"] = false}
+		local CrateDelay2 = {["Value"] = 10}
+		local KindOfCrate2 = {["Value"] = "AutoSpawnChest"}
+		AntiRubble = GuiLibrary["ObjectsThatCanBeSaved"]["WorldWindow"]["Api"].CreateOptionsButton({
+			["Name"] = "AntiRubble",
+			["Function"] = function(callback) if callback then
+					createnotification("AntiRubble", "AntiRubble has been turned Off", 3)
+					while game:GetService("RunService").Heartbeat:Wait() and AntiRubble.Enabled == true do
+						print("1")
+						for i,v in pairs(game.Workspace:GetChildren()) do
+							if v.Name == "Bridge Rubble" or
+								v.Name == "Poor Banto" or
+								v.Name == "Poor Bantae" or
+								v.Name == "Stable Rubble" or
+								v.Name == "Dock Rubble" or
+								v.Name == "Hut Rubble" or
+								v.Name == "Stone Rubble" or
+								v.Name == "Wood Rubble" or
+								v.Name == "Tower Rubble" or
+								v.Name == "Stone Wall Rubble" or
+								v.Name == "Campfire Rubble" or
+								v.Name == "Lookout Rubble" or
+								v.Name == "Hovel Rubble" or
+								v.Name == "Plant Box Rubble" or
+								v.Name == "Wood Wall Rubble"
+							then
+								for i,v in pairs(v:GetChildren()) do
+									if v.ClassName == "Part" then
+										v.CanCollide = false
+									end
+								end
+							end
+						end
+					end
+				else
+					createnotification("AntiRubble", "AntiRubble has been turned Off", 3)
+				end
+			end,
+			["HoverText"] = "goes through rubbble", 
+			["Default"] = false,
+			["ExtraText"] = function() return " Placeholder" end
+		})
+
+		OpenCrate2 = GuiLibrary["ObjectsThatCanBeSaved"]["WorldWindow"]["Api"].CreateOptionsButton({
+			["Name"] = "AutoSpawnChest",
+			["Function"] = function(callback) if callback then
+					createnotification("AutoSpawnChest", "AutoSpawnChest has been turned Off", 3)
+					while wait(1 / CrateDelay2.Value) and OpenCrate2.Enabled == true do
+						local args = {
+							[1] = KindOfCrate2
+						}
+
+						game:GetService("ReplicatedStorage").Events.ChestDrop:FireServer(unpack(args))
+
+					end
+				else
+					createnotification("AutoSpawnChest", "AutoSpawnChest has been turned Off", 3)
+				end
+			end,
+			["HoverText"] = "keep opening crates", 
+			["Default"] = false,
+			["ExtraText"] = function() return " Placeholder" end
+		})
+		CrateDelay2 = OpenCrate2.CreateSlider({
+			["Name"] = "Delay",
+			["Min"] = 10,
+			["Max"] = 500,
+			["Function"] = function(val)
+			end,
+			["HoverText"] = "every 10 on the slider is 0.1 seconds",
+			["Default"] = 100
+		})
+		KindOfCrate2 = OpenCrate2.CreateDropdown({
+			["Name"] = "Select Chest",
+			["List"] = {"Food Chest", 
+				"Resource Chest",
+				"Essence Chest",
+				"Crystal Chest",
+				"Adurite Chest",
+				"Magnetite Chest",
+			},
+			["Function"] = function(val)
+			end
+		})
+
+		local AntiVoid = {["Enabled"] = false}
+		local AntiVoidMethod = {["Value"] = "Teleport"}
+		AntiVoid = GuiLibrary["ObjectsThatCanBeSaved"]["WorldWindow"]["Api"].CreateOptionsButton({
+			["Name"] = "AntiVoid",
+			["Function"] = function(callback) if callback then
+					createnotification("AntiVoid", "AntiVoid has been turned On", 3)
+					if AntiVoid.Enabled == true then
+						local newindex = getrawmetatable(game).__newindex;
+						setreadonly(getrawmetatable(game),false);
+
+						getrawmetatable(game).__newindex = function(t,i,v)
+							if i=="FallenPartsDestroyHeight" and not checkcaller() and AntiVoid.Enabled == true then
+								return newindex(t,i,16);
+							end
+							return newindex(t,i,v);
+						end
+					end
+					while game:GetService("RunService").Heartbeat:Wait() and AntiVoid.Enabled == true do
+						print("1")
+						game.Workspace.FallenPartsDestroyHeight = -50000
+						if game.Workspace.Characters:FindFirstChild(game.Players.LocalPlayer.Name).HumanoidRootPart.Position.Y <= -500 then
+							if AntiVoidMethod.Value == "Teleport" then
+								local r = math.random(1,3)
+								if r == 1 then
+									game.Workspace.Characters:FindFirstChild(game.Players.LocalPlayer.Name).HumanoidRootPart.CFrame = CFrame.new(game.Workspace.Teleporters.HavenPortal.TeleportPart.Position)	
+									wait(5)
+								end
+								if r == 2 then
+									game.Workspace.Characters:FindFirstChild(game.Players.LocalPlayer.Name).HumanoidRootPart.CFrame = CFrame.new(game.Workspace.Teleporters.LavaPortal.TeleportPart.Position)
+									wait(5)
+								end
+								if r == 3 then
+									game.Workspace.Characters:FindFirstChild(game.Players.LocalPlayer.Name).HumanoidRootPart.CFrame = CFrame.new(game.Workspace.Teleporters.SkyIslandTeleporters.TeleportPart.Position)	
+									wait(5)
+								end
+							end
+							if AntiVoidMethod.Value == "Kick" then
+								local msgbox = messagebox("AntiVoid",tostring("You deid in the void"),4)
+								setfpscap(math.huge)
+								wait(5)
+							end
+						end
+					end
+				else
+					game.Workspace.FallenPartsDestroyHeight = -500
+					createnotification("AntiVoid", "AntiVoid has been turned Off", 3)
+
+				end
+			end,
+			["HoverText"] = "kicks you when someone has this in the group", 
+			["Default"] = false,
+			["ExtraText"] = function() return " Placeholder" end
+		})
+		AntiVoidMethod = AntiVoid.CreateDropdown({
+			["Name"] = "Select Method",
+			["List"] = {"Teleport", "Kick"},
+			["Function"] = function(val)
+			end
+		})
+
+		local OpenMarket = false
+		local OpenMarketOption = Utility.CreateOptionsButton({
+			["Name"] = "Open Market",
+			["Function"] = function(callback) if callback then
+					OpenMarket = true
+					createnotification("Open Market", "You have just opened the market", 3)
+					for i,v in pairs(game:GetService("Players").LocalPlayer.PlayerGui.MainGui.LeftPanel:GetChildren()) do
+						v.Visible = false
+					end
+					for i,v in pairs(game:GetService("Players").LocalPlayer.PlayerGui.MainGui.RightPanel:GetChildren()) do
+						v.Visible = false
+					end
+					wait(0.05)
+					game:GetService("Players").LocalPlayer.PlayerGui.MainGui.RightPanel.Market.Visible = true
+					game:GetService("Players").LocalPlayer.PlayerGui.MainGui.LeftPanel.Market.Visible = true
+				else
+				end
+			end,
+			["HoverText"] = "Opens the market", 
+			["Default"] = false,
+			["ExtraText"] = function() return " Placeholder" end
+		})
+
+		local invenabled = false
+		local x = 0
+		local y = 0
+		local z = 0
+		local InvisibleOption = Utility.CreateOptionsButton({
+			["Name"] = "Invisible",
+			["Function"] = function(callback) if callback then
+					invenabled = true
+					createnotification("Invisible", "You are now invisible", 3)
+					if game.Workspace.Characters:FindFirstChild(game.Players.LocalPlayer.Name):FindFirstChild("LowerTorso") then
+						game.Workspace.Characters:FindFirstChild(game.Players.LocalPlayer.Name).UpperTorso.Anchored = true
+						game.Workspace.Characters:FindFirstChild(game.Players.LocalPlayer.Name).Animate:Destroy()
+
+						game.Workspace.Characters:FindFirstChild(game.Players.LocalPlayer.Name):FindFirstChild("LowerTorso"):Destroy()
+					end
+				else
+				end
+			end,
+			["HoverText"] = "makes you invisible YOUR NOT GOD", 
+			["Default"] = false,
+			["ExtraText"] = function() return " Placeholder" end
+		})
+
+		local CraftStructuresEnabled = false
+		local structureName = {["Value"] = ""}
+
+		local CraftStructures = World.CreateOptionsButton({
+			["Name"] = "Craft Structures",
+			["Function"] = function(callback)
+				if callback then
+					CraftStructuresEnabled = true
+					createnotification("Craft Structures", "Crafted "..structureName.Value, 3)
+					if structureName.Value == "Bridge" then
+						local A_1 = "Bridge"
+						local A_2 = game.Workspace.Characters:FindFirstChild(game.Players.LocalPlayer.Name).HumanoidRootPart.CFrame * CFrame.new(0,-5,0)
+						local A_3 = 0
+						local Event = game:GetService("ReplicatedStorage").Events.PlaceStructure
+						Event:FireServer(A_1, A_2, A_3)
+					end
+					if structureName.Value == "Dock" then
+						local A_1 = "Dock"
+						local A_2 = game.Workspace.Characters:FindFirstChild(game.Players.LocalPlayer.Name).HumanoidRootPart.CFrame * CFrame.new(0,-5,0)
+						local A_3 = 0
+						local Event = game:GetService("ReplicatedStorage").Events.PlaceStructure
+						Event:FireServer(A_1, A_2, A_3)
+					end
+					if structureName.Value == "Plant Box" then
+						local A_1 = "Plant Box"
+						local A_2 = game.Workspace.Characters:FindFirstChild(game.Players.LocalPlayer.Name).HumanoidRootPart.CFrame * CFrame.new(0,-5,0)
+						local A_3 = 0
+						local Event = game:GetService("ReplicatedStorage").Events.PlaceStructure
+						Event:FireServer(A_1, A_2, A_3)
+					end
+					if structureName.Value == "Wood Wall" then
+						local A_1 = "Wood Wall"
+						local A_2 = game.Workspace.Characters:FindFirstChild(game.Players.LocalPlayer.Name).HumanoidRootPart.CFrame * CFrame.new(0,-5,0)
+						local A_3 = 0
+						local Event = game:GetService("ReplicatedStorage").Events.PlaceStructure
+						Event:FireServer(A_1, A_2, A_3)
+					end
+					if structureName.Value == "Lookout" then
+						local A_1 = "Lookout"
+						local A_2 = game.Workspace.Characters:FindFirstChild(game.Players.LocalPlayer.Name).HumanoidRootPart.CFrame * CFrame.new(0,-5,0)
+						local A_3 = 0
+						local Event = game:GetService("ReplicatedStorage").Events.PlaceStructure
+						Event:FireServer(A_1, A_2, A_3)
+					end
+					if structureName.Value == "Chest" then
+						local A_1 = "Chest"
+						local A_2 = game.Workspace.Characters:FindFirstChild(game.Players.LocalPlayer.Name).HumanoidRootPart.CFrame * CFrame.new(0,-5,0)
+						local A_3 = 0
+						local Event = game:GetService("ReplicatedStorage").Events.PlaceStructure
+						Event:FireServer(A_1, A_2, A_3)
+					end
+					if structureName.Value == "Coin Press" then
+						local A_1 = "Coin Press"
+						local A_2 = game.Workspace.Characters:FindFirstChild(game.Players.LocalPlayer.Name).HumanoidRootPart.CFrame * CFrame.new(0,-5,0)
+						local A_3 = 0
+						local Event = game:GetService("ReplicatedStorage").Events.PlaceStructure
+						Event:FireServer(A_1, A_2, A_3)
+					end
+					if structureName.Value == "Stone Wall" then
+						local A_1 = "Stone Wall"
+						local A_2 = game.Workspace.Characters:FindFirstChild(game.Players.LocalPlayer.Name).HumanoidRootPart.CFrame * CFrame.new(0,-5,0)
+						local A_3 = 0
+						local Event = game:GetService("ReplicatedStorage").Events.PlaceStructure
+						Event:FireServer(A_1, A_2, A_3)
+					end
+					if structureName.Value == "Nest" then
+						local A_1 = "Nest"
+						local A_2 = game.Workspace.Characters:FindFirstChild(game.Players.LocalPlayer.Name).HumanoidRootPart.CFrame * CFrame.new(0,-5,0)
+						local A_3 = 0
+						local Event = game:GetService("ReplicatedStorage").Events.PlaceStructure
+						Event:FireServer(A_1, A_2, A_3)
+					end
+					if structureName.Value == "Campfire" then
+						local A_1 = "Campfire"
+						local A_2 = game.Workspace.Characters:FindFirstChild(game.Players.LocalPlayer.Name).HumanoidRootPart.CFrame * CFrame.new(0,-5,0)
+						local A_3 = 0
+						local Event = game:GetService("ReplicatedStorage").Events.PlaceStructure
+						Event:FireServer(A_1, A_2, A_3)
+					end
+				else
+				end
+			end,
+			["HoverText"] = "Craft a structure",
+			["Default"] = false,
+			["ExtraText"] = function() return "" end
+		})
+
+		structureName = CraftStructures.CreateDropdown({
+			["Name"] = "Select Structure",
+			["List"] = {"Bridge", "Dock", "Plant Box", "Wood Wall", "Campfire", "Lookout", "Chest", "Coin Press", "Stone Wall", "Nest"},
+			["Function"] = function(val)
+			end
+		})
+
+		local p1 = false
+		local p2 = false
+		local p3 = false
+
+		local Portal1 = World.CreateOptionsButton({
+			["Name"] = "Haven Portal",
+			["Function"] = function(callback)
+				if callback then
+					p1 = true
+					createnotification("Teleporting", "Haven Portal", 3)
+					game.Workspace.Characters:FindFirstChild(game.Players.LocalPlayer.Name).HumanoidRootPart.CFrame = CFrame.new(game.Workspace.Teleporters.HavenPortal.TeleportPart.Position)
+				else
+				end
+			end,
+			["HoverText"] = "teleport to haven portal",
+			["Default"] = false,
+			["ExtraText"] = function() return "" end
+		})
+		local Portal2 = World.CreateOptionsButton({
+			["Name"] = "Lava Portal",
+			["Function"] = function(callback)
+				if callback then
+					p2 = true
+					createnotification("Teleporting", "Lava Portal", 3)
+					game.Workspace.Characters:FindFirstChild(game.Players.LocalPlayer.Name).HumanoidRootPart.CFrame = CFrame.new(game.Workspace.Teleporters.LavaPortal.TeleportPart.Position)
+				else
+				end
+			end,
+			["HoverText"] = "teleport to lava portal",
+			["Default"] = false,
+			["ExtraText"] = function() return "" end
+		})
+		local Portal3 = World.CreateOptionsButton({
+			["Name"] = "Sky Portal",
+			["Function"] = function(callback)
+				if callback then
+					p3 = true
+					game.Workspace.Characters:FindFirstChild(game.Players.LocalPlayer.Name).HumanoidRootPart.CFrame = CFrame.new(game.Workspace.Teleporters.SkyIslandTeleporters.TeleportPart.Position)	
+					createnotification("Teleporting", "Sky Portal", 3)
+				else
+				end
+			end,
+			["HoverText"] = "teleport to sky portal",
+			["Default"] = false,
+			["ExtraText"] = function() return "" end
+		})
+
+		local sellItemenabled = false
+		local NameOfItem = {["Value"] = "Stick"}
+		local AmmountOfItem = {["Value"] = 5}
+		local AmmountOfCost = {["Value"] = 100}
+		local SellItem = Utility.CreateOptionsButton({
+			["Name"] = "Sell Item",
+			["Function"] = function(callback) if callback then
+					sellItemenabled = true
+					local args = {
+						[1] = tostring(NameOfItem),
+						[2] = AmmountOfCost,
+						[3] = AmmountOfItem
+					}
+
+					game:GetService("ReplicatedStorage").Events.SubmitTrade:FireServer(unpack(args))
+				else
+				end
+			end,
+			["HoverText"] = "sell the item", 
+			["Default"] = false,
+			["ExtraText"] = function() return " Placeholder" end
+		})
+		NameOfItem = SellItem.CreateTextBox({
+			["Name"] = "Item",
+			["TempText"] = "Item Name",
+			["HoverText"] = "the item you want to sell"
+		})
+		AmmountOfItem = SellItem.CreateSlider({
+			["Name"] = "Item Ammount",
+			["Min"] = 10,
+			["Max"] = 120,
+			["Function"] = function(val)
+			end,
+			["HoverText"] = "change your view and make your screen more wider",
+			["Default"] = 70
+		})
+		AmmountOfCost = SellItem.CreateSlider({
+			["Name"] = "Coins Price",
+			["Min"] = 10,
+			["Max"] = 120,
+			["Function"] = function(val)
+			end,
+			["HoverText"] = "change your view and make your screen more wider",
+			["Default"] = 70
+		})
+
+		while game:GetService("RunService").Heartbeat:Wait() do
+			print("1")
+			pcall(function()
+				if CraftStructuresEnabled == true then
+					CraftStructures["ToggleButton"](false)
+					CraftStructuresEnabled = false
+				end
+			end)
+			pcall(function()
+				if p1 == true then
+					Portal1["ToggleButton"](false)
+					p1 = false
+				end
+			end)
+			pcall(function()
+				if p2 == true then
+					Portal2["ToggleButton"](false)
+					p2 = false
+				end
+			end)
+			pcall(function()
+				if p3 == true then
+					Portal3["ToggleButton"](false)
+					p3 = false
+				end
+			end)
+			pcall(function()
+				if invenabled == true then
+					InvisibleOption["ToggleButton"](false)
+					invenabled = false
+				end
+			end)
+			pcall(function()
+				if sellItemenabled == true then
+					SellItem["ToggleButton"](false)
+					sellItemenabled = false
+				end
+			end)
+			pcall(function()
+				if OpenMarket == true then
+					OpenMarketOption["ToggleButton"](false)
+					OpenMarket = false
+				end
+			end)
+			for i,v in pairs(game:GetService("Players").LocalPlayer.PlayerGui.MainGui.LeftPanel.UserSettings.Backdrop.List:GetChildren()) do
+				if v.ClassName ~= "UIListLayout" then
+					for _,e in pairs(v:GetChildren()) do
+						if e.ClassName == "TextLabel" then
+							if e.Text == "Camera lock" then
+								print("0")
+								if v.ButtonFrame.Switch.ImageColor3 == Color3.fromRGB(170, 255, 0) then
+									print("0")
+									CamLock = true
+								end
+								if v.ButtonFrame.Switch.ImageColor3 == Color3.fromRGB(255, 0, 0) then
+									print("0")
+									CamLock = false
+								end
+							end
+						end
+					end
+				end
+			end
+		end
+	end)
+end
+
+local WhitelistedGame = 1612000933
+
+if setfpscap and writefile and makefolder and getcustomasset and setclipboard then
+	print("--API--")
+	print("setfpscap")
+	print("writefile")
+	print("makefolder")
+	print("getcustomasset")
+	print("setclipboard")
+	print("-------")
+	if game.GameId == WhitelistedGame then
+		CreateVape()
+	end
+end
