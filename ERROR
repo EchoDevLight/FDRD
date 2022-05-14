@@ -39,7 +39,6 @@ function CreateVape()
 	local rs = game:GetService("RunService")
 	local starterPlayer = game:GetService("StarterPlayer")
 
-	local FlySpeed = {["Value"] = 500}
 	local lastUpdate = 0
 	local selected = false
 
@@ -70,55 +69,6 @@ function CreateVape()
 		return (suc and res)
 	end
 
-	function getNextMovement(deltaTime)
-		local nextMove = Vector3.new()
-		if userInput:IsKeyDown("A") or userInput:IsKeyDown("Left") then
-			nextMove = Vector3.new(-1,0,0)
-		elseif userInput:IsKeyDown("D") or userInput:IsKeyDown("Right") then
-			nextMove = Vector3.new(1,0,0)
-		end
-		if userInput:IsKeyDown("W") or userInput:IsKeyDown("Up") then
-			nextMove = nextMove + Vector3.new(0,0,-1)
-		elseif userInput:IsKeyDown("S") or userInput:IsKeyDown("Down") then
-			nextMove = nextMove + Vector3.new(0,0,1)
-		end
-		if userInput:IsKeyDown("Space") then
-			nextMove = nextMove + Vector3.new(0,1,0)
-		elseif userInput:IsKeyDown("LeftControl") then
-			nextMove = nextMove + Vector3.new(0,-1,0)
-		end
-		return CFrame.new( nextMove * (FlySpeed.Value * deltaTime) )
-	end
-
-	function onSelected()
-		local char = player.Character
-		if char then
-			local humanoid = char:WaitForChild("Humanoid")
-			local root = char:WaitForChild("HumanoidRootPart")
-			currentPos = root.Position
-			selected = true
-			root.Anchored = true
-			lastUpdate = tick()
-			humanoid.PlatformStand = true
-			while selected do
-				wait()
-				local delta = tick()-lastUpdate
-				local look = (c.Focus.p-c.CoordinateFrame.p).unit
-				local move = getNextMovement(delta)
-				local pos = root.Position
-				root.CFrame = CFrame.new(pos,pos+look) * move
-				lastUpdate = tick()
-			end
-			root.Anchored = false
-			root.Velocity = Vector3.new()
-			humanoid.PlatformStand = false
-		end
-	end
-
-	function onDeselected()
-		selected = false
-	end
-
 	local function BindToStepped(name, num, func)
 		if StepTable[name] == nil then
 			StepTable[name] = game:GetService("RunService").Stepped:connect(func)
@@ -144,6 +94,21 @@ function CreateVape()
 		func()
 	end
 
+	local function BindToRenderStep(name, num, func)
+		if RenderStepTable[name] == nil then
+			RenderStepTable[name] = game:GetService("RunService").RenderStepped:connect(func)
+		end
+	end
+
+	local function UnbindFromRenderStep(name)
+		if RenderStepTable[name] then
+			RenderStepTable[name]:Disconnect()
+			RenderStepTable[name] = nil
+		end
+	end
+
+	local MainCharacter = game.Workspace.Characters:FindFirstChild(game.Players.LocalPlayer.Name)
+
 	createnotification("Vape V4", "Right-Shift to see Menu!", 5)
 
 	runcode(function()
@@ -158,6 +123,102 @@ function CreateVape()
 		local AutoHeal = {["Enabled"] = false}
 		local HealthMustBe = {["Value"] = 70}
 		local AutoHealItem = {["Value"] = ""}
+
+		local AutoClicker = {["Enabled"] = false}
+		local CPS = {["Value"] = 70}
+
+		--[[
+		local AimAssist = {["Enabled"] = false}
+		local AimAssistClickAim = {["Enabled"] = false}
+		local AimAssistStrafe = {["Enabled"] = false}
+		local AimSpeed = {["Value"] = 1}
+		local AimAssistTargetFrame = {["Players"] = {["Enabled"] = false}}
+		local aimbegan
+		local aimended
+		local aimactive = false
+		AimAssist = GuiLibrary["ObjectsThatCanBeSaved"]["CombatWindow"]["Api"].CreateOptionsButton({
+			["Name"] = "AimAssist",
+			["Function"] = function(callback)
+				if callback then
+					local uis = game:GetService("UserInputService")
+					aimbegan = uis.InputBegan:connect(function(input1)
+						if uis:GetFocusedTextBox() == nil and input1.UserInputType == Enum.UserInputType.MouseButton1 then
+							aimactive = true
+						end
+					end)
+
+					aimended = uis.InputEnded:connect(function(input1)
+						if input1.UserInputType == Enum.UserInputType.MouseButton1 then
+							aimactive = false
+						end
+					end)
+
+					local cam = game.Workspace.CurrentCamera
+
+					BindToRenderStep("AimAssist", 1, function()
+						if (AimAssistClickAim["Enabled"] and aimactive or AimAssistClickAim["Enabled"] == false) then
+							local targettable = {}
+							wait(0.1)
+							for i,plr in pairs(game.Players:GetChildren()) do
+								if game.Workspace.Characters:FindFirstChild(game.Players.LocalPlayer.Name) then
+									if game.Workspace.Characters:FindFirstChild(game.Players.LocalPlayer.Name):FindFirstChild("HumanoidRootPart") then
+										local char = game.Workspace.Characters:FindFirstChild(game.Players.LocalPlayer.Name)
+										if plr and (char.HumanoidRootPart.Position - plr.Character.HumanoidRootPart.Position).magnitude < 20 then
+											cam.CFrame = cam.CFrame:lerp(CFrame.new(cam.CFrame.p, plr.Character.HumanoidRootPart.Position), (1 / AimSpeed["Value"]) - (AimAssistStrafe["Enabled"] and (uis:IsKeyDown(Enum.KeyCode.A) or uis:IsKeyDown(Enum.KeyCode.D)) and 0.01 or 0))
+										end
+									end
+								end
+							end
+						end
+					end)
+				else
+					UnbindFromRenderStep("AimAssist")
+					aimbegan:Disconnect()
+					aimended:Disconnect()
+					aimactive = false
+				end
+			end,
+			["HoverText"] = "Smoothly aims to closest valid target with sword"
+		})
+		AimSpeed = AimAssist.CreateSlider({
+			["Name"] = "Smoothness",
+			["Min"] = 1,
+			["Max"] = 100, 
+			["Function"] = function(val) end,
+			["Default"] = 50
+		})
+		]]
+
+		AutoClicker = GuiLibrary["ObjectsThatCanBeSaved"]["CombatWindow"]["Api"].CreateOptionsButton({
+			["Name"] = "Auto Clicker",
+			["Function"] = function(callback)
+				if callback then
+					createnotification("Auto Clicker", "Auto Clicker has been turned On", 3)
+					while wait(CPS / 1) and AutoClicker.Enabled == true do
+						local char = game.Workspace.Characters:FindFirstChild(game.Players.LocalPlayer.Name)
+						game:GetService("UserInputService").InputEnded:connect(function(input)
+							if input.UserInputType == Enum.UserInputType.MouseButton1 then
+								if GuiLibrary["MainGui"].ScaledGui.ClickGui.Visible == false then
+									mouse1click()  
+								end
+							end
+						end)
+					end
+				else
+					createnotification("Auto Clicker", "Auto Clicker has been turned Off", 3)
+				end
+			end,
+			["HoverText"] = "Kills people in your radius",
+			["Default"] = false,
+			["ExtraText"] = function() return " " end
+		})
+		CPS = AutoClicker.CreateTwoSlider({
+			["Name"] = "CPS",
+			["Min"] = 1,
+			["Max"] = 10,
+			["Function"] = function(val) end,
+			["Default"] = 5,
+		})
 
 		AutoTool = GuiLibrary["ObjectsThatCanBeSaved"]["CombatWindow"]["Api"].CreateOptionsButton({
 			["Name"] = "AutoTool",
@@ -195,7 +256,7 @@ function CreateVape()
 		})
 		AutoWeapon = AutoTool.CreateToggle({
 			["Name"] = "Weapons",
-			["HoverText"] = "automatticly takes out your weapon when you ",
+			["HoverText"] = "automatticly takes out your weapon when someone is near you",
 			["Function"] = function(callback)
 				if callback then
 
@@ -219,35 +280,13 @@ function CreateVape()
 			["Function"] = function(callback)
 				if callback then
 					createnotification("KillAura", "Killaura has been turned On", 3)
-					while wait() and KillAura.Enabled == true do
+					while wait(0.5) and KillAura.Enabled == true do
 						for i,v in pairs(game.Players:GetChildren()) do
 							if v.Character.HumanoidRootPart then
 
 								local char = game.Workspace.Characters:FindFirstChild(game.Players.LocalPlayer.Name)
-								if (char.HumanoidRootPart.Position - v.Character.HumanoidRootPart.Position).magnitude < 15 and v.Name ~= game.Players.LocalPlayer.Name then
-
-									local char = game.Workspace.Characters:FindFirstChild(Player.Name)
-									if (char.HumanoidRootPart.Position - v.Character.HumanoidRootPart.Position).magnitude < KillAuraRange.Value and v.Name ~= game.Players.LocalPlayer.Name then
-										local list = {
-											v.Character.Head,
-											v.Character.UpperTorso,
-											v.Character.LowerTorso,
-											v.Character.LeftFoot,
-											v.Character.RightFoot,
-											v.Character.LeftLowerArm,
-											v.Character.LeftLowerLeg,
-											v.Character.RightLowerArm,
-											v.Character.RightLowerLeg,
-											v.Character.LeftUpperArm,
-											v.Character.RightUpperArm,
-											v.Character.LeftUpperLeg,
-											v.Character.RightUpperLeg,
-											v.Character.LeftHand,
-											v.Character.RightHand
-										}
-
-										game:GetService("ReplicatedStorage").Events.SwingTool:FireServer(game:GetService("ReplicatedStorage").RelativeTime.Value, list)
-									end
+								if (char.HumanoidRootPart.Position - v.Character.HumanoidRootPart.Position).magnitude < 15 and v.Name ~= game.Players.LocalPlayer.Name and GuiLibrary["MainGui"].ScaledGui.ClickGui.Visible == false then
+									mouse1click()  
 								end
 							end
 						end
@@ -317,10 +356,11 @@ function CreateVape()
 
 		local AutoFarm = {["Enabled"] = false}
 		local AutoFarmDelay = {["Value"] = 10}
-		local AutoFarmName = {["Value"] = ""}
+		local AutoFarmName = {["Value"] = "Small Tree"}
 
 		local TeleportGrab = {["Enabled"] = false}
 		local TeleportUseless1 = {["Value"] = false}
+		local EnableBlacklist = {["Value"] = false}
 		local TeleportIgnored1 = {["Value"] = ""}
 		local TeleportIgnored2 = {["Value"] = ""}
 		local TeleportIgnored3 = {["Value"] = ""}
@@ -335,8 +375,6 @@ function CreateVape()
 		local AutoDrop = {["Enabled"] = false}
 		local AutoDropItem = {["Value"] = ""}
 
-		local Fly = {["Enabled"] = false}
-
 		local Gravity = {["Enabled"] = false}
 		local GravityPower = {["Value"] = 500}
 
@@ -347,6 +385,30 @@ function CreateVape()
 		local SpeedPower = {["Value"] = 10}
 
 		local NoSlowDown = {["Enabled"] = false}
+
+		local Blink = {["Enabled"] = false}
+
+		Blink = GuiLibrary["ObjectsThatCanBeSaved"]["BlatantWindow"]["Api"].CreateOptionsButton({
+			["Name"] = "Blink",
+			["Function"] = function(callback)
+				if callback then
+					createnotification("Blink", "Blink has been turned On", 3)
+					game:GetService("NetworkClient"):SetOutgoingKBPSLimit(0.01)
+					if Blink["Enabled"] == true then 
+						settings():GetService("NetworkSettings").IncomingReplicationLag = 99999999
+					end
+				else
+					game:GetService("NetworkClient"):SetOutgoingKBPSLimit(math.huge)
+					if Blink["Enabled"] == false then 
+						settings():GetService("NetworkSettings").IncomingReplicationLag = 0
+					end
+					createnotification("Blink", "Blink has been turned Off", 3)
+				end
+			end,
+			["HoverText"] = "Chokes all incoming or outgoing packets",
+			["Default"] = false,
+			["ExtraText"] = function() return " " end
+		})
 
 		AutoFarm = GuiLibrary["ObjectsThatCanBeSaved"]["BlatantWindow"]["Api"].CreateOptionsButton({
 			["Name"] = "AutoFarm",
@@ -360,24 +422,24 @@ function CreateVape()
 								local char = game.Workspace.Characters:FindFirstChild(game.Players.LocalPlayer.Name)
 
 								if e.ClassName == "Part" then
-									if AutoFarmName.Value == "Small Tree" and v.Name == "Small Tree" then
-										char.HumanoidRootPart.CFrame = CFrame.new(e.Position + Vector3.new(0,4,0))
+									if AutoFarmName.Value == "Small Tree" and v.Name == "Small Tree" and AutoFarm.Enabled == true then
+										char.HumanoidRootPart.CFrame = CFrame.new(e.Position + Vector3.new(0,4,3))
 										wait(AutoFarmDelay.Value)
 									end
-									if AutoFarmName.Value == "Sun Tree" and v.Name == "Sun Tree" then
-										char.HumanoidRootPart.CFrame = CFrame.new(e.Position + Vector3.new(0,4,0))
+									if AutoFarmName.Value == "Sun Tree" and v.Name == "Sun Tree" and AutoFarm.Enabled == true then
+										char.HumanoidRootPart.CFrame = CFrame.new(e.Position + Vector3.new(0,4,3))
 										wait(AutoFarmDelay.Value)
 									end
-									if AutoFarmName.Value == "Small Rock" and v.Name == "Small Rock" then
-										char.HumanoidRootPart.CFrame = CFrame.new(e.Position + Vector3.new(0,4,0))
+									if AutoFarmName.Value == "Small Rock" and v.Name == "Small Rock" and AutoFarm.Enabled == true then
+										char.HumanoidRootPart.CFrame = CFrame.new(e.Position + Vector3.new(0,4,3))
 										wait(AutoFarmDelay.Value)
 									end
-									if AutoFarmName.Value == "Gold Node" and v.Name == "Gold Node" then
-										char.HumanoidRootPart.CFrame = CFrame.new(e.Position + Vector3.new(0,4,0))
+									if AutoFarmName.Value == "Gold Node" and v.Name == "Gold Node" and AutoFarm.Enabled == true then
+										char.HumanoidRootPart.CFrame = CFrame.new(e.Position + Vector3.new(0,4,3))
 										wait(AutoFarmDelay.Value)
 									end
-									if AutoFarmName.Value == "Crystal" and v.Name == "Crystal Lode" then
-										char.HumanoidRootPart.CFrame = CFrame.new(e.Position + Vector3.new(0,4,0))
+									if AutoFarmName.Value == "Crystal" and v.Name == "Crystal Lode" and AutoFarm.Enabled == true then
+										char.HumanoidRootPart.CFrame = CFrame.new(e.Position + Vector3.new(0,4,3))
 										wait(AutoFarmDelay.Value)
 									end
 								end
@@ -422,17 +484,35 @@ function CreateVape()
 						for i,v in next, game.Workspace.Items:GetChildren() do
 							for _,e in pairs(v:GetChildren()) do
 								if e.ClassName == "Part" then
-									if v.Name ~= TeleportIgnored1.Value or v.Name ~= TeleportIgnored2.Value or v.Name ~= TeleportIgnored3.Value or v.Name ~= TeleportIgnored4.Value or 
-										v.Name ~= TeleportIgnored5.Value or v.Name ~= TeleportIgnored6.Value or v.Name ~= TeleportIgnored7.Value or v.Name ~= TeleportIgnored8.Value or 
-										v.Name ~= TeleportIgnored9.Value or v.Name ~= TeleportIgnored10.Value then
-										if TeleportUseless1.Value == true then
-											if v.Name ~= "Egg" or v.Name ~= "Log" or v.Name ~= "Leaves" or v.Name ~= "Ice Cube" or v.Name ~= "Barley" or v.Name ~= "Peeper Popsicle" then
-												game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(e.Position + Vector3.new(0,4,0))
-												wait(0.05)
+									if EnableBlacklist == true then
+
+										if v.Name ~= TeleportIgnored1.Value or
+											v.Name ~= TeleportIgnored2.Value or
+											v.Name ~= TeleportIgnored3.Value or
+											v.Name ~= TeleportIgnored4.Value or 
+											v.Name ~= TeleportIgnored5.Value or
+											v.Name ~= TeleportIgnored6.Value or
+											v.Name ~= TeleportIgnored7.Value or
+											v.Name ~= TeleportIgnored8.Value or 
+											v.Name ~= TeleportIgnored9.Value or
+											v.Name ~= TeleportIgnored10.Value 
+										then
+											
+											if TeleportUseless1.Value == true and TeleportGrab.Enabled == true then
+												if v.Name ~= "Egg" or v.Name ~= "Log" or v.Name ~= "Leaves" or v.Name ~= "Ice Cube" or v.Name ~= "Barley" or v.Name ~= "Peeper Popsicle" and TeleportGrab.Enabled == true then
+													MainCharacter.HumanoidRootPart.CFrame = CFrame.new(e.Position + Vector3.new(0,4,0))
+													wait(0.05)
+												end
 											end
+
+											if TeleportUseless1.Value == false and TeleportGrab.Enabled == true then
+												MainCharacter.HumanoidRootPart.CFrame = CFrame.new(e.Position + Vector3.new(0,4,0))
+											end
+											
 										end
-										if TeleportUseless1.Value == false then
-											game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(e.Position + Vector3.new(0,4,0))
+									else
+										if TeleportGrab.Enabled == true then
+											MainCharacter.HumanoidRootPart.CFrame = CFrame.new(e.Position + Vector3.new(0,4,0))
 											wait(0.05)
 										end
 									end
@@ -458,6 +538,17 @@ function CreateVape()
 				end
 			end,
 			["Default"] = false
+		})
+		EnableBlacklist = TeleportGrab.CreateToggle({
+			["Name"] = "Blacklist",
+			["HoverText"] = "blacklist any items that you dont want",
+			["Function"] = function(callback)
+				if callback then
+
+				else
+				end
+			end,
+			["Default"] = true
 		})
 		TeleportIgnored1 = TeleportGrab.CreateTextBox({
 			["Name"] = "Ignore Item",
@@ -551,7 +642,7 @@ function CreateVape()
 								if v.ClassName == "Model" then
 									for _,p in pairs(v:GetChildren()) do
 										if p.ClassName == "Part" and AutoPickup.Enabled == true then
-											if (game.Players.LocalPlayer.Character.HumanoidRootPart.Position - p.Position).magnitude < pickupRange then
+											if (MainCharacter.HumanoidRootPart.Position - p.Position).magnitude < pickupRange then
 												game:GetService("ReplicatedStorage").Events.PickupItem:InvokeServer(v, v.ClassName)
 											end
 										end
@@ -633,34 +724,6 @@ function CreateVape()
 			["TempText"] = "Item Name",
 			["HoverText"] = "drop the item you want"
 		})
-
-		Fly = GuiLibrary["ObjectsThatCanBeSaved"]["BlatantWindow"]["Api"].CreateOptionsButton({
-			["Name"] = "Fly",
-			["Function"] = function(callback)
-				if callback then
-					createnotification("Fly", "Fly has been turned On", 3)
-					onSelected()
-				else
-					createnotification("Fly", "Fly has been turned Off", 3)
-					onDeselected()
-				end
-			end,
-			["HoverText"] = "Just fly and your god but you cant hit anyone",
-			["Default"] = false,
-			["ExtraText"] = function() return " " end
-		})
-
-		FlySpeed = Fly.CreateSlider({
-			["Name"] = "Power",
-			["Min"] = 100,
-			["Max"] = 5000,
-			["Function"] = function(val)
-
-			end,
-			["HoverText"] = "set the fly power",
-			["Default"] = 500
-		})
-
 		Gravity = GuiLibrary["ObjectsThatCanBeSaved"]["BlatantWindow"]["Api"].CreateOptionsButton({
 			["Name"] = "Gravity",
 			["Function"] = function(callback)
@@ -775,48 +838,6 @@ function CreateVape()
 					end)
 
 					mouse.KeyDown:connect(function(key)
-						if key == "d" and Speed.Enabled == true and CamLock == false then
-							loop2 = true
-							while loop2 and Speed.Enabled == true do
-								local char2 = game.Workspace.Characters:FindFirstChild(game.Players.LocalPlayer.Name)
-								if char2:FindFirstChild("HumanoidRootPart") then
-									local hum = char2:FindFirstChild("HumanoidRootPart")
-
-									hum.CFrame = hum.CFrame + hum.CFrame.lookVector * SpeedPower.Value / 10
-									game:GetService("RunService").Heartbeat:Wait()
-								end
-							end
-						end
-					end)
-
-					mouse.KeyUp:connect(function(key)
-						if key == "d" then
-							loop2 = false
-						end
-					end)
-
-					mouse.KeyDown:connect(function(key)
-						if key == "a" and Speed.Enabled == true and CamLock == false then
-							loop3 = true
-							while loop3 and Speed.Enabled == true do
-								local char2 = game.Workspace.Characters:FindFirstChild(game.Players.LocalPlayer.Name)
-								if char2:FindFirstChild("HumanoidRootPart") then
-									local hum = char2:FindFirstChild("HumanoidRootPart")
-
-									hum.CFrame = hum.CFrame + hum.CFrame.lookVector * SpeedPower.Value / 10
-									game:GetService("RunService").Heartbeat:Wait()
-								end
-							end
-						end
-					end)
-
-					mouse.KeyUp:connect(function(key)
-						if key == "a" then
-							loop3 = false
-						end
-					end)
-
-					mouse.KeyDown:connect(function(key)
 						if key == "s" and Speed.Enabled == true then
 							loop4 = true
 							while loop4 and Speed.Enabled == true do
@@ -824,7 +845,7 @@ function CreateVape()
 								if char2:FindFirstChild("HumanoidRootPart") then
 									local hum = char2:FindFirstChild("HumanoidRootPart")
 
-									hum.CFrame = hum.CFrame + hum.CFrame.lookVector * SpeedPower.Value / 10
+									hum.CFrame = hum.CFrame + hum.CFrame.lookVector / SpeedPower.Value / 10
 									game:GetService("RunService").Heartbeat:Wait()
 								end
 							end
@@ -845,7 +866,7 @@ function CreateVape()
 			["ExtraText"] = function() return " " end
 		})
 		SpeedPower = Speed.CreateSlider({
-			["Name"] = "Power",
+			["Name"] = "Speed",
 			["Min"] = 1,
 			["Max"] = 100,
 			["Function"] = function(val)
@@ -902,13 +923,118 @@ function CreateVape()
 
 		local FullBright = {["Enabled"] = false}
 
-		local NoBob = {["Enabled"] = false}
 		local FPSBoost = {["Enabled"] = false}
+
+		local Cape = {["Enabled"] = false}
+		local CapeColor = {["Value"] = 0.44}
+
+		local function GetCape(char)
+			for i,v in pairs(char:GetDescendants()) do
+				if v.Name == "Cape" then
+					v:Remove()
+				end
+			end
+			local char = MainCharacter
+			local hum = char:WaitForChild("Humanoid")
+			local torso = char:WaitForChild("UpperTorso")
+			local p = Instance.new("Part", torso.Parent)
+			p.Name = "Cape"
+			p.Anchored = false
+			p.CanCollide = false
+			p.TopSurface = 0
+			p.BottomSurface = 0
+			p.FormFactor = "Custom"
+			p.Size = Vector3.new(2,3.5,0.1)
+			p.Transparency = 0
+			p.Color = Color3.fromHSV(CapeColor["Hue"], CapeColor["Sat"], CapeColor["Value"])
+
+			--[[
+			local gui = Instance.new("SurfaceGui", p)
+			gui.Face = "Back"
+			gui.Adornee = p
+
+			local decal = Instance.new("ImageLabel", gui)
+			decal.Image = "rbxassetid://"..CapeAsset.Value
+			decal.ScaleType = Enum.ScaleType.Fit
+			decal.Size = UDim2.new(1, 0,0.6, 0)
+			decal.Position = UDim2.new(0, 0,0.22, 0)
+			decal.Transparency = 1
+			]]
+
+			local msh = Instance.new("BlockMesh", p)
+			msh.Scale = Vector3.new(1,1,1)
+			local motor = Instance.new("Motor", p)
+			motor.Part0 = p
+			motor.Part1 = torso
+			motor.MaxVelocity = 0.01
+			motor.C0 = CFrame.new(0,2,0) * CFrame.Angles(0,math.rad(90),0)
+			motor.C1 = CFrame.new(0,1,0.45) * CFrame.Angles(0,math.rad(90),0)
+			local wave = false
+			repeat wait(1/44)
+				local ang = 0.1
+				local oldmag = torso.Velocity.magnitude
+				local mv = 0.002
+				if wave then
+					ang = ang + ((torso.Velocity.magnitude/10) * 0.05) + 0.05
+					wave = false
+				else
+					wave = true
+				end
+				ang = ang + math.min(torso.Velocity.magnitude/11, 0.5)
+				motor.MaxVelocity = math.min((torso.Velocity.magnitude/111), 0.04)
+				motor.DesiredAngle = -ang
+				if motor.CurrentAngle < -0.2 and motor.DesiredAngle > -0.2 then
+					motor.MaxVelocity = 0.04
+				end
+				repeat wait() until motor.CurrentAngle == motor.DesiredAngle or math.abs(torso.Velocity.magnitude - oldmag) >= (torso.Velocity.magnitude/10) + 1
+				if torso.Velocity.magnitude < 0.1 then 
+					wait(0.1)
+				end
+			until not p or p.Parent ~= torso.Parent
+		end
+
+		Cape = GuiLibrary["ObjectsThatCanBeSaved"]["RenderWindow"]["Api"].CreateOptionsButton({
+			["Name"] = "Cape",
+			["Function"] = function(callback) if callback then
+					createnotification("Cape", "Cape has been turned On", 3)
+					game.Players.LocalPlayer.CharacterAdded:connect(function(char)
+						if MainCharacter and Cape.Enabled == true then
+							GetCape(MainCharacter)
+						end
+					end)
+					if MainCharacter and Cape.Enabled == true then
+						spawn(function()
+							pcall(function() 
+								GetCape(MainCharacter)
+							end)
+						end)
+					end
+				else
+					if MainCharacter then
+						for i,v in pairs(MainCharacter:GetDescendants()) do
+							if v.Name == "Cape" and Cape.Enabled == false then
+								v:Remove()
+							end
+						end
+					end
+					createnotification("Cape", "Cape has been turned Off", 3)
+				end
+			end,
+			["HoverText"] = "custom cape for looks",
+			["Default"] = false,
+			["ExtraText"] = function() return " Placeholder" end
+		})
+		CapeColor = Cape.CreateColorSlider({
+			["Name"] = "Cape Color",
+			["HoverText"] = "changes the color on the Cape",
+			["Function"] = function(val)
+			end
+		})
 
 		MaxDistance = GuiLibrary["ObjectsThatCanBeSaved"]["RenderWindow"]["Api"].CreateOptionsButton({
 			["Name"] = "MaxDistance",
 			["Function"] = function(callback) if callback then
-					createnotification("FieldOfView", "FieldOfView has been turned On", 3)
+					createnotification("MaxDistance", "MaxDistance has been turned On", 3)
 					while wait() and MaxDistance.Enabled == true do
 						game.Players.LocalPlayer.CameraMaxZoomDistance = MaxDistanceVal.Value
 					end
@@ -930,36 +1056,6 @@ function CreateVape()
 			end,
 			["HoverText"] = "change your distance",
 			["Default"] = 1000
-		})
-
-		NoBob = GuiLibrary["ObjectsThatCanBeSaved"]["RenderWindow"]["Api"].CreateOptionsButton({
-			["Name"] = "NoBob",
-			["Function"] = function(callback) if callback then
-					game.Workspace.Characters:FindFirstChild(game.Players.LocalPlayer.Name).Humanoid.Died:Connect(function()
-						local AnimationId = "507768375"
-						local Anim = Instance.new("Animation")
-						Anim.AnimationId = "rbxassetid://"..AnimationId
-						local k = game.Workspace.Characters:FindFirstChild(game.Players.LocalPlayer.Name).Humanoid:LoadAnimation(Anim)
-						k:Play()
-					end)
-					local AnimationId = "507768375"
-					local Anim = Instance.new("Animation")
-					Anim.AnimationId = "rbxassetid://"..AnimationId
-					local k = game.Workspace.Characters:FindFirstChild(game.Players.LocalPlayer.Name).Humanoid:LoadAnimation(Anim)
-					k:Play()
-					createnotification("NoBob", "NoBob has been turned On", 3)
-				else
-					local AnimationId = "507768375"
-					local Anim = Instance.new("Animation")
-					Anim.AnimationId = "rbxassetid://"..AnimationId
-					local k = game.Workspace.Characters:FindFirstChild(game.Players.LocalPlayer.Name).Humanoid:LoadAnimation(Anim)
-					k:Stop()
-					createnotification("NoBob", "NoBob has been turned Off", 3)
-				end
-			end,
-			["HoverText"] = "no need to move hands and makes it easier to fight",
-			["Default"] = false,
-			["ExtraText"] = function() return " Placeholder" end
 		})
 
 		PlayerESP = GuiLibrary["ObjectsThatCanBeSaved"]["RenderWindow"]["Api"].CreateOptionsButton({
@@ -1303,10 +1399,8 @@ function CreateVape()
 		local trueScale = {["Value"] = 1}
 
 		local GlitchedAvatar = {["Enabled"] = false}
-		local UIScale = {["Enabled"] = false}
 		local AutoLeave = {["Enabled"] = false}
 		local CanLock = {["Enabled"] = false}
-		local trueScale = {["Value"] = 1}
 
 		AutoInvite = GuiLibrary["ObjectsThatCanBeSaved"]["UtilityWindow"]["Api"].CreateOptionsButton({
 			["Name"] = "AutoInvite",
@@ -1519,36 +1613,9 @@ function CreateVape()
 
 				end
 			end,
-			["HoverText"] = "oh noo SPOOKY", 
+			["HoverText"] = "changes your look kinda laggy so dont use maybe", 
 			["Default"] = false,
 			["ExtraText"] = function() return " Placeholder" end
-		})
-
-		UIScale = GuiLibrary["ObjectsThatCanBeSaved"]["UtilityWindow"]["Api"].CreateOptionsButton({
-			["Name"] = "UI Scale",
-			["Function"] = function(callback) if callback then
-					createnotification("UI Scale", "UI Scale has been turned Off", 3)
-					while game:GetService("RunService").Heartbeat:Wait() and UIScale.Enabled == true do
-						game:GetService("Players").SonicBotWasTaken.PlayerGui.MainGui.GlobalUIScale.Value = trueScale.Value / 50
-					end
-				else
-					createnotification("UI Scale", "UI Scale has been turned Off", 3)
-					game:GetService("Players").SonicBotWasTaken.PlayerGui.MainGui.GlobalUIScale.Value = 1
-
-				end
-			end,
-			["HoverText"] = "changes the scale of your gui", 
-			["Default"] = false,
-			["ExtraText"] = function() return " Placeholder" end
-		})
-		trueScale = UIScale.CreateSlider({
-			["Name"] = "Scale",
-			["Min"] = 1,
-			["Max"] = 100,
-			["Function"] = function(val)
-			end,
-			["HoverText"] = "changes the scale of your ui",
-			["Default"] = 50
 		})
 
 		CanLock = GuiLibrary["ObjectsThatCanBeSaved"]["UtilityWindow"]["Api"].CreateOptionsButton({
@@ -1685,16 +1752,35 @@ function CreateVape()
 	end)
 
 	runcode(function()
+		local AntiAfk = {["Enabled"] = false}
 		local AntiRubble = {["Enabled"] = false}
 		local OpenCrate2 = {["Enabled"] = false}
 		local CrateDelay2 = {["Value"] = 10}
 		local KindOfCrate2 = {["Value"] = "AutoSpawnChest"}
+		AntiAfk = GuiLibrary["ObjectsThatCanBeSaved"]["WorldWindow"]["Api"].CreateOptionsButton({
+			["Name"] = "AntiAfk",
+			["Function"] = function(callback) if callback then
+					createnotification("AntiAfk", "AntiAfk has been turned Off", 3)
+					game:service'Players'.LocalPlayer.Idled:connect(function()
+						if AntiAfk.Enabled == true then
+							local bb = game:service'VirtualUser'
+							bb:CaptureController()
+							bb:ClickButton2(Vector2.new())
+						end
+					end)
+				else
+					createnotification("AntiAfk", "AntiAfk has been turned Off", 3)
+				end
+			end,
+			["HoverText"] = "stay in the game when your afk", 
+			["Default"] = false,
+			["ExtraText"] = function() return " Placeholder" end
+		})
 		AntiRubble = GuiLibrary["ObjectsThatCanBeSaved"]["WorldWindow"]["Api"].CreateOptionsButton({
 			["Name"] = "AntiRubble",
 			["Function"] = function(callback) if callback then
 					createnotification("AntiRubble", "AntiRubble has been turned Off", 3)
 					while game:GetService("RunService").Heartbeat:Wait() and AntiRubble.Enabled == true do
-						print("1")
 						for i,v in pairs(game.Workspace:GetChildren()) do
 							if v.Name == "Bridge Rubble" or
 								v.Name == "Poor Banto" or
@@ -1721,6 +1807,30 @@ function CreateVape()
 						end
 					end
 				else
+					for i,v in pairs(game.Workspace:GetChildren()) do
+						if v.Name == "Bridge Rubble" or
+							v.Name == "Poor Banto" or
+							v.Name == "Poor Bantae" or
+							v.Name == "Stable Rubble" or
+							v.Name == "Dock Rubble" or
+							v.Name == "Hut Rubble" or
+							v.Name == "Stone Rubble" or
+							v.Name == "Wood Rubble" or
+							v.Name == "Tower Rubble" or
+							v.Name == "Stone Wall Rubble" or
+							v.Name == "Campfire Rubble" or
+							v.Name == "Lookout Rubble" or
+							v.Name == "Hovel Rubble" or
+							v.Name == "Plant Box Rubble" or
+							v.Name == "Wood Wall Rubble"
+						then
+							for i,v in pairs(v:GetChildren()) do
+								if v.ClassName == "Part" then
+									v.CanCollide = true
+								end
+							end
+						end
+					end
 					createnotification("AntiRubble", "AntiRubble has been turned Off", 3)
 				end
 			end,
@@ -1789,7 +1899,6 @@ function CreateVape()
 						end
 					end
 					while game:GetService("RunService").Heartbeat:Wait() and AntiVoid.Enabled == true do
-						print("1")
 						game.Workspace.FallenPartsDestroyHeight = -50000
 						if game.Workspace.Characters:FindFirstChild(game.Players.LocalPlayer.Name).HumanoidRootPart.Position.Y <= -500 then
 							if AntiVoidMethod.Value == "Teleport" then
@@ -1861,18 +1970,26 @@ function CreateVape()
 		local InvisibleOption = Utility.CreateOptionsButton({
 			["Name"] = "Invisible",
 			["Function"] = function(callback) if callback then
-					invenabled = true
 					createnotification("Invisible", "You are now invisible", 3)
 					if game.Workspace.Characters:FindFirstChild(game.Players.LocalPlayer.Name):FindFirstChild("LowerTorso") then
-						game.Workspace.Characters:FindFirstChild(game.Players.LocalPlayer.Name).UpperTorso.Anchored = true
+						local notDied = true
+						x = game.Workspace.Characters:FindFirstChild(game.Players.LocalPlayer.Name).HumanoidRootPart.Position.X
+						y = game.Workspace.Characters:FindFirstChild(game.Players.LocalPlayer.Name).HumanoidRootPart.Position.Y
+						z = game.Workspace.Characters:FindFirstChild(game.Players.LocalPlayer.Name).HumanoidRootPart.Position.Z
+						game.Workspace.Characters:FindFirstChild(game.Players.LocalPlayer.Name).HumanoidRootPart.CFrame = CFrame.new(0, -500, 0)
 						game.Workspace.Characters:FindFirstChild(game.Players.LocalPlayer.Name).Animate:Destroy()
-
+						wait(0.5)
+						game.Workspace.Characters:FindFirstChild(game.Players.LocalPlayer.Name).HumanoidRootPart.CFrame = CFrame.new(x, y, z)
 						game.Workspace.Characters:FindFirstChild(game.Players.LocalPlayer.Name):FindFirstChild("LowerTorso"):Destroy()
+						
+						MainCharacter.Humanoid.Died:Connect(function()
+							notDied = false
+						end)
 					end
 				else
 				end
 			end,
-			["HoverText"] = "makes you invisible YOUR NOT GOD", 
+			["HoverText"] = "makes you invisible", 
 			["Default"] = false,
 			["ExtraText"] = function() return " Placeholder" end
 		})
@@ -2065,7 +2182,6 @@ function CreateVape()
 		})
 
 		while game:GetService("RunService").Heartbeat:Wait() do
-			print("1")
 			pcall(function()
 				if CraftStructuresEnabled == true then
 					CraftStructures["ToggleButton"](false)
@@ -2113,13 +2229,10 @@ function CreateVape()
 					for _,e in pairs(v:GetChildren()) do
 						if e.ClassName == "TextLabel" then
 							if e.Text == "Camera lock" then
-								print("0")
 								if v.ButtonFrame.Switch.ImageColor3 == Color3.fromRGB(170, 255, 0) then
-									print("0")
 									CamLock = true
 								end
 								if v.ButtonFrame.Switch.ImageColor3 == Color3.fromRGB(255, 0, 0) then
-									print("0")
 									CamLock = false
 								end
 							end
@@ -2133,15 +2246,6 @@ end
 
 local WhitelistedGame = 1612000933
 
-if setfpscap and writefile and makefolder and getcustomasset and setclipboard then
-	print("--API--")
-	print("setfpscap")
-	print("writefile")
-	print("makefolder")
-	print("getcustomasset")
-	print("setclipboard")
-	print("-------")
-	if game.GameId == WhitelistedGame then
-		CreateVape()
-	end
+if game.GameId == WhitelistedGame then
+	CreateVape()
 end
